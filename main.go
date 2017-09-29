@@ -44,6 +44,15 @@ func main() {
 		panic("Error creating REST Kube Client: ")
 	}
 
+	certlist, err := CertClient.Certificates("default").List(metav1.ListOptions{})
+	if err != nil {
+		fmt.Println(err)
+
+	}
+	for _, i := range certlist.Items {
+		fmt.Println(i.Name)
+	}
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	zap.L().Info("Everything started. Waiting for Stop signal")

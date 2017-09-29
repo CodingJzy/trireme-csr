@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +31,7 @@ var (
 const GroupName = "certmanager.k8s.io"
 
 // SchemeGroupVersion is the group version used to register these objects.
-var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
 
 // Resource takes an unqualified resource and returns a Group-qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
@@ -44,6 +44,9 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&Certificate{},
 		&CertificateList{},
 	)
+
+	scheme.AddKnownTypes(SchemeGroupVersion, &metav1.Status{})
+
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }

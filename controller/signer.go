@@ -1,21 +1,38 @@
 package signer
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+
+	apiv1 "k8s.io/api/core/v1"
+
+	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
 )
 
-type signerController struct {
-	signerClient *rest.RESTClient
+type certificateController struct {
+	certificateClient *rest.RESTClient
 }
 
-func (c *signerController) Run() error {}
+func (c *certificateController) Run() error {
+	fmt.Print("Watch Certificates objects\n")
 
-func (c *signerController) watchCerts() (cache.Controller, error) {
+	// Watch Example objects
+	_, err := c.watchCerts()
+	if err != nil {
+		fmt.Printf("Failed to register watch for Example resource: %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *certificateController) watchCerts() (cache.Controller, error) {
 	source := cache.NewListWatchFromClient(
-		c.ExampleClient,
-		crv1.ExampleResourcePlural,
+		c.certificateClient,
+		certificatev1alpha1.CertificateResourcePlural,
 		apiv1.NamespaceAll,
 		fields.Everything())
 
@@ -23,7 +40,7 @@ func (c *signerController) watchCerts() (cache.Controller, error) {
 		source,
 
 		// The object type.
-		&crv1.Example{},
+		&certificatev1alpha1.Certificate{},
 
 		0,
 
@@ -33,12 +50,19 @@ func (c *signerController) watchCerts() (cache.Controller, error) {
 			DeleteFunc: c.onDelete,
 		})
 
-	go controller.Run(ctx.Done())
+	go controller.Run(nil)
 	return controller, nil
 }
 
-func (c *ExampleController) onAdd(obj interface{})
+func (c *certificateController) onAdd(obj interface{}) {
+	fmt.Printf("AddingCert: %v\n", obj)
 
-func (c *ExampleController) onUpdate(oldObj, newObj interface{}) {}
+}
 
-func (c *ExampleController) onDelete(obj interface{}) {}
+func (c *certificateController) onUpdate(oldObj, newObj interface{}) {
+	fmt.Printf("UpdatingCert: %v\n", newObj)
+}
+
+func (c *certificateController) onDelete(obj interface{}) {
+	fmt.Printf("DeletingCert: %v\n", obj)
+}

@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 
-	certificatev1 "github.com/aporeto-inc/trireme-csr/apis/v1"
+	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
 )
 
 // CertificateClient represents a client for the CRD for certs.
@@ -16,12 +16,12 @@ type CertificateClient struct {
 // NewClient generates a client for the certificate type.
 func NewClient(cfg *rest.Config) (*CertificateClient, *runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
-	if err := certificatev1.AddToScheme(scheme); err != nil {
+	if err := certificatev1alpha1.AddToScheme(scheme); err != nil {
 		return nil, nil, err
 	}
 
 	config := *cfg
-	config.GroupVersion = &certificatev1.SchemeGroupVersion
+	config.GroupVersion = &certificatev1alpha1.SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.ContentType = runtime.ContentTypeJSON
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)}
