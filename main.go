@@ -13,6 +13,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
+	certificateclient "github.com/aporeto-inc/trireme-csr/client"
 )
 
 // KubeconfigPath is the static path to my KubeConfig
@@ -27,14 +29,19 @@ func main() {
 		panic(err)
 	}
 
-	myClient, err := kubernetes.NewForConfig(config)
+	MainClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		panic("Error creating REST Kube Client: ")
 	}
 
-	list, _ := myClient.Core().Pods("").List(metav1.ListOptions{})
+	list, _ := MainClient.CoreV1().Pods("").List(metav1.ListOptions{})
 	for _, i := range list.Items {
 		fmt.Println(i.Name)
+	}
+
+	CertClient, _, err := certificateclient.NewClient(config)
+	if err != nil {
+		panic("Error creating REST Kube Client: ")
 	}
 
 	c := make(chan os.Signal, 1)
