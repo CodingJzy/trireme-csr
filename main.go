@@ -1,15 +1,42 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
+
+// KubeconfigPath is the static path to my KubeConfig
+// TODO: remove
+const KubeconfigPath = "/Users/bvandewa/.kube/config"
 
 func main() {
 	setLogs("info")
+
+	config, err := buildConfig(KubeconfigPath)
+	if err != nil {
+		panic(err)
+	}
+
+	myClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic("Error creating REST Kube Client: ")
+	}
+
+	list, _ := myClient.Core().Pods("").List(metav1.ListOptions{})
+	for _, i := range list.Items {
+		fmt.Println(i.Name)
+	}
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	zap.L().Info("Everything started. Waiting for Stop signal")
@@ -18,7 +45,7 @@ func main() {
 	zap.L().Info("SIG received. Exiting")
 }
 
-// setLogs setups Zap to
+// setLogs setups Zap to the specified logLevel.
 func setLogs(logLevel string) error {
 	zapConfig := zap.NewDevelopmentConfig()
 	zapConfig.DisableStacktrace = true
@@ -48,4 +75,11 @@ func setLogs(logLevel string) error {
 
 	zap.ReplaceGlobals(logger)
 	return nil
+}
+
+func buildConfig(kubeconfig string) (*rest.Config, error) {
+	if kubeconfig != "" {
+		return clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
+	return rest.InClusterConfig()
 }
