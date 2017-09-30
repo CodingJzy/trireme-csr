@@ -15,6 +15,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	certificateclient "github.com/aporeto-inc/trireme-csr/client"
+	certificatecontroller "github.com/aporeto-inc/trireme-csr/controller"
 )
 
 // KubeconfigPath is the static path to my KubeConfig
@@ -39,12 +40,12 @@ func main() {
 		fmt.Println(i.Name)
 	}
 
-	CertClient, _, err := certificateclient.NewClient(config)
+	certClient, _, err := certificateclient.NewClient(config)
 	if err != nil {
 		panic("Error creating REST Kube Client: ")
 	}
 
-	certlist, err := CertClient.Certificates("default").List(metav1.ListOptions{})
+	certlist, err := certClient.Certificates("default").List(metav1.ListOptions{})
 	if err != nil {
 		fmt.Println(err)
 
@@ -52,6 +53,10 @@ func main() {
 	for _, i := range certlist.Items {
 		fmt.Println(i.Name)
 	}
+
+	// start a controller on instances of our custom resource
+	certController := certificatecontroller.NewCertificateController(certClient.RESTClient(), "")
+	go certController.Run()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)

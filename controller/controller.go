@@ -1,4 +1,4 @@
-package signer
+package controller
 
 import (
 	"fmt"
@@ -7,16 +7,21 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
-	apiv1 "k8s.io/api/core/v1"
-
 	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
 )
 
-type certificateController struct {
-	certificateClient *rest.RESTClient
+type CertificateController struct {
+	certificateClient rest.Interface
 }
 
-func (c *certificateController) Run() error {
+// NewCertificateController generates the new CertificateController
+func NewCertificateController(certificateClient rest.Interface, ca string) *CertificateController {
+	return &CertificateController{
+		certificateClient: certificateClient,
+	}
+}
+
+func (c *CertificateController) Run() error {
 	fmt.Print("Watch Certificates objects\n")
 
 	// Watch Example objects
@@ -29,11 +34,11 @@ func (c *certificateController) Run() error {
 	return nil
 }
 
-func (c *certificateController) watchCerts() (cache.Controller, error) {
+func (c *CertificateController) watchCerts() (cache.Controller, error) {
 	source := cache.NewListWatchFromClient(
 		c.certificateClient,
 		certificatev1alpha1.CertificateResourcePlural,
-		apiv1.NamespaceAll,
+		"",
 		fields.Everything())
 
 	_, controller := cache.NewInformer(
@@ -54,15 +59,14 @@ func (c *certificateController) watchCerts() (cache.Controller, error) {
 	return controller, nil
 }
 
-func (c *certificateController) onAdd(obj interface{}) {
+func (c *CertificateController) onAdd(obj interface{}) {
 	fmt.Printf("AddingCert: %v\n", obj)
-
 }
 
-func (c *certificateController) onUpdate(oldObj, newObj interface{}) {
+func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
 	fmt.Printf("UpdatingCert: %v\n", newObj)
 }
 
-func (c *certificateController) onDelete(obj interface{}) {
+func (c *CertificateController) onDelete(obj interface{}) {
 	fmt.Printf("DeletingCert: %v\n", obj)
 }
