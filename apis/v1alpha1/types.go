@@ -15,14 +15,14 @@ type Certificate struct {
 
 // CertificateSpec is the specification for Certificates on the API
 type CertificateSpec struct {
-	Foo string `json:"foo"`
-	Bar bool   `json:"bar"`
+	// Base64-encoded PKCS#10 CSR data
+	Request []byte `json:"request" protobuf:"bytes,1,opt,name=request"`
 }
 
 // CertificateStatus is the status for Certificates on the API
 type CertificateStatus struct {
 	State       CertificateState `json:"state,omitempty"`
-	Certificate string           `json:"message,omitempty"`
+	Certificate []byte           `json:"certificate,omitempty" protobuf:"bytes,2,opt,name=certificate"`
 }
 
 // CertificateState defines the state of the certificate
