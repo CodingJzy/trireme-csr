@@ -4,5 +4,4 @@ metadata:
   name: test
   namespace: default
 spec:
-  prout: a
-  tete: b
+  request: dGVzdDIz

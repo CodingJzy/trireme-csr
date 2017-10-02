@@ -21,6 +21,7 @@ func NewCertificateController(certificateClient rest.Interface, ca string) *Cert
 	}
 }
 
+// Run starts the certificateWatcher.
 func (c *CertificateController) Run() error {
 	fmt.Print("Watch Certificates objects\n")
 
@@ -44,7 +45,6 @@ func (c *CertificateController) watchCerts() (cache.Controller, error) {
 	_, controller := cache.NewInformer(
 		source,
 
-		// The object type.
 		&certificatev1alpha1.Certificate{},
 
 		0,
@@ -61,6 +61,8 @@ func (c *CertificateController) watchCerts() (cache.Controller, error) {
 
 func (c *CertificateController) onAdd(obj interface{}) {
 	fmt.Printf("AddingCert: %v\n", obj)
+	certRequest := obj.(*certificatev1alpha1.Certificate)
+	fmt.Printf("AddingCert: %v\n", certRequest)
 }
 
 func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
