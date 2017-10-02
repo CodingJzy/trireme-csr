@@ -13,7 +13,7 @@ import (
 var oidEmailAddress = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 
 func main() {
-	keyBytes, _ := rsa.GenerateKey(rand.Reader, 1024)
+	keyBytes, _ := rsa.GenerateKey(rand.Reader, 2048)
 
 	emailAddress := "test@example.com"
 	subj := pkix.Name{
