@@ -15,39 +15,39 @@ import (
 	"github.com/aporeto-inc/tg/tglib"
 )
 
-type Signer struct {
+// Issuer takes CSRs and issues valid certificates based on a valid CA
+type Issuer struct {
 	signingCert    *x509.Certificate
 	signingKey     crypto.PrivateKey
 	signingKeyPass string
 }
 
-func NewSigner(signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*Signer, error) {
-	return &Signer{
+// NewIssuer creates an issuer based on crypto CA objects
+func NewIssuer(signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*Issuer, error) {
+	return &Issuer{
 		signingCert:    signingCert,
 		signingKey:     signingKey,
 		signingKeyPass: signingKeyPass,
 	}, nil
 }
 
-func NewSignerFromPath(signingCertPath, signingCertKeyPath, signingKeyPass string) (*Signer, error) {
+// NewIssuerFromPath creates an issuer based on the path of PEM encoded crypto primitives
+func NewIssuerFromPath(signingCertPath, signingCertKeyPath, signingKeyPass string) (*Issuer, error) {
 	signingCert, signingKey, err := tglib.ReadCertificatePEM(signingCertPath, signingCertKeyPath, signingKeyPass)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Signer{
-		signingCert:    signingCert,
-		signingKey:     signingKey,
-		signingKeyPass: signingKeyPass,
-	}, nil
+	return NewIssuer(signingCert, signingKey, signingKeyPass)
 }
 
-func (s *Signer) Validate(csr *x509.CertificateRequest) error {
+// Validate verifys that the CSR is allowed to be issued. Return an error if not allowed.
+func (s *Issuer) Validate(csr *x509.CertificateRequest) error {
 	return nil
 }
 
 // Sign generate a signed and valid certificate for the CSR given as parameter
-func (s *Signer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
+func (s *Issuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 
 	// Generate random serial number.
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
