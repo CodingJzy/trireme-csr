@@ -55,7 +55,7 @@ func main() {
 	}
 
 	// start a controller on instances of our custom resource
-	certController := certificatecontroller.NewCertificateController(certClient.RESTClient(), "")
+	certController := certificatecontroller.NewCertificateController(certClient, "")
 	go certController.Run()
 
 	c := make(chan os.Signal, 1)

@@ -4,30 +4,34 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/aporeto-inc/tg/tglib"
 	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
 	"github.com/aporeto-inc/trireme-csr/certificates"
+	certificateclient "github.com/aporeto-inc/trireme-csr/client"
 )
 
 // CertificateController contains all the logic to implement the issuance of certificates.
 type CertificateController struct {
-	certificateClient rest.Interface
+	certificateClient *certificateclient.CertificateClient
 	signer            *certificates.Signer
 }
 
-// NewCertificateController generates the new CertificateController
-func NewCertificateController(certificateClient rest.Interface, ca string) *CertificateController {
-	key, err := tglib.RSAPrivateKeyGenerator()
-	if err != nil {
-	}
+var certPath = "/Users/bvandewa/golang/src/github.com/aporeto-inc/trireme-csr/testdata/private/ca.cert.pem"
+var certKeyPath = "/Users/bvandewa/golang/src/github.com/aporeto-inc/trireme-csr/testdata/private/ca.key.pem"
+var certPass = "test"
 
-	certificates.NewSigner(signingCertPath, signingCertKeyPath, signingKeyPass)
+// NewCertificateController generates the new CertificateController
+func NewCertificateController(certificateClient *certificateclient.CertificateClient, ca string) *CertificateController {
+
+	signer, err := certificates.NewSignerFromPath(certPath, certKeyPath, certPass)
+	if err != nil {
+		fmt.Printf("Error creating new Signer %s", err)
+	}
 
 	return &CertificateController{
 		certificateClient: certificateClient,
+		signer:            signer,
 	}
 }
 
@@ -47,7 +51,7 @@ func (c *CertificateController) Run() error {
 
 func (c *CertificateController) watchCerts() (cache.Controller, error) {
 	source := cache.NewListWatchFromClient(
-		c.certificateClient,
+		c.certificateClient.RESTClient(),
 		certificatev1alpha1.CertificateResourcePlural,
 		"",
 		fields.Everything())
@@ -73,6 +77,21 @@ func (c *CertificateController) onAdd(obj interface{}) {
 	fmt.Printf("AddingCert: %v\n", obj)
 	certRequest := obj.(*certificatev1alpha1.Certificate)
 	fmt.Printf("AddingCert: %v\n", certRequest)
+	csr, err := certificates.LoadCSR(certRequest.Spec.Request)
+	if err != nil {
+		fmt.Printf("Error loading cert: %s\n", err)
+	}
+
+	cert, err := c.signer.Sign(csr)
+	if err != nil {
+		fmt.Printf("Error issuing cert: %s\n", err)
+	}
+	fmt.Printf("Cert generated: %s\n", cert)
+
+	certRequest.Status.Certificate = cert
+
+	c.certificateClient.Certificates(certRequest.Namespace).Update(certRequest)
+
 }
 
 func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
