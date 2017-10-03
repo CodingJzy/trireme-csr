@@ -7,15 +7,25 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
+	"github.com/aporeto-inc/tg/tglib"
 	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
+	"github.com/aporeto-inc/trireme-csr/certificates"
 )
 
+// CertificateController contains all the logic to implement the issuance of certificates.
 type CertificateController struct {
 	certificateClient rest.Interface
+	signer            *certificates.Signer
 }
 
 // NewCertificateController generates the new CertificateController
 func NewCertificateController(certificateClient rest.Interface, ca string) *CertificateController {
+	key, err := tglib.RSAPrivateKeyGenerator()
+	if err != nil {
+	}
+
+	certificates.NewSigner(signingCertPath, signingCertKeyPath, signingKeyPass)
+
 	return &CertificateController{
 		certificateClient: certificateClient,
 	}

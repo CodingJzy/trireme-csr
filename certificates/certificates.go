@@ -1,55 +1,32 @@
 package certificates
 
-import (
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
-)
+import "time"
 
-type certManager struct {
+type CertManager struct {
 	keyPass    string
 	privateKey []byte
 	csr        []byte
 }
 
-func (m *certManager) GeneratePrivateKey() {
-
+func newCertManager() (*CertManager, error) {
+	return &CertManager{}, nil
 }
 
-func (m *certManager) GetCertificate() {
-
+func (m *CertManager) GeneratePrivateKey() {
 }
 
-func (m *certManager) GetKey() {
+func (m *CertManager) GetCertificate() {
+}
 
+func (m *CertManager) GetKey() {
 }
 
 // SendAndWaitforCert is a blocking func that issue the CertificateRequest and
 // returns once the Certificate is available.
-func (m *certManager) SendAndWaitforCert() error {
-
+func (m *CertManager) SendAndWaitforCert(timeout time.Duration) {
 }
 
 // IsIssued returns true if the certificate is issued by the controller
-func (m *certManager) IsIssued() (bool, error) {
-
-}
-
-func (m *certManager) IssueCertificate() (bool, error) {
-
-	asn1Data, err := x509.CreateCertificate(rand.Reader, x509Cert, signerCert, pub, signerKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	privPEM, err := KeyToPEM(priv)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	certPEM := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: asn1Data,
-	}
-
+func (m *CertManager) IsIssued() (bool, error) {
+	return false, nil
 }
