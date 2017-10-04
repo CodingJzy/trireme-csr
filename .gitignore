@@ -1,3 +1,4 @@
 cmd/ClientEmulator/ClientEmulator
 vendor/
-trireme-csr`
+trireme-csr
+glide.lock
