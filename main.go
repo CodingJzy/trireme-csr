@@ -1,17 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	certificateclient "github.com/aporeto-inc/trireme-csr/client"
@@ -25,45 +22,24 @@ const KubeconfigPath = "/Users/bvandewa/.kube/config"
 func main() {
 	setLogs("info")
 
+	// Get the Kube API interface for Certificates up
 	config, err := buildConfig(KubeconfigPath)
 	if err != nil {
 		panic(err)
 	}
 
-	MainClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic("Error creating REST Kube Client: ")
-	}
-
-	list, _ := MainClient.CoreV1().Pods("").List(metav1.ListOptions{})
-	for _, i := range list.Items {
-		fmt.Println(i.Name)
-	}
-
 	certClient, _, err := certificateclient.NewClient(config)
 	if err != nil {
-		panic("Error creating REST Kube Client: ")
+		panic("Error creating REST Kube Client for certificates: " + err.Error())
 	}
 
-	certlist, err := certClient.Certificates("default").List(metav1.ListOptions{})
-	if err != nil {
-		fmt.Println(err)
-
-	}
-	for _, i := range certlist.Items {
-		fmt.Println(i.Name)
-	}
-
-	// start a controller on instances of our custom resource
+	// start a controller on instances of the Certificates custom resource
 	certController := certificatecontroller.NewCertificateController(certClient, "")
 	go certController.Run()
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	zap.L().Info("Everything started. Waiting for Stop signal")
-	// Waiting for a Sig
-	<-c
-	zap.L().Info("SIG received. Exiting")
+	waitForSig()
+
+	zap.L().Info("Trireme-CSR clean exit")
 }
 
 // setLogs setups Zap to the specified logLevel.
@@ -103,4 +79,13 @@ func buildConfig(kubeconfig string) (*rest.Config, error) {
 		return clientcmd.BuildConfigFromFlags("", kubeconfig)
 	}
 	return rest.InClusterConfig()
+}
+
+func waitForSig() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	zap.L().Info("Everything started. Waiting for Stop signal")
+	// Waiting for a Sig
+	<-c
+	zap.L().Info("SIG received. Exiting")
 }

@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/aporeto-inc/tg/tglib"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +21,7 @@ import (
 )
 
 // CertManager manages the client side for the client.
+// It encapsulates the PrivateKey that should always remain private to this pod.
 type CertManager struct {
 	certName   string
 	keyPass    string
@@ -98,10 +101,21 @@ func (m *CertManager) GetCert() (*x509.Certificate, error) {
 // SendAndWaitforCert is a blocking func that issue the CertificateRequest and
 // returns once the Certificate is available.
 func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
-	if _, err := m.certClient.Certificates("default").Get(m.certName, metav1.GetOptions{}); err == nil {
-		return fmt.Errorf("Couldn't query for existing CSR object %s", err)
+
+	// First check if the certificate was already issued.
+	certs, err := m.certClient.Certificates("default").List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("Couldn't query for existing CSR object list %s", err)
+	}
+	for _, cert := range certs.Items {
+		if cert.Name == m.certName {
+			if cert.Status.Certificate != nil {
+				return nil
+			}
+		}
 	}
 
+	// Generate the new certificate kube object
 	kubeCert := &certificatev1alpha1.Certificate{
 		Spec: certificatev1alpha1.CertificateSpec{
 			Request: m.csr,
@@ -109,7 +123,8 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 	}
 	kubeCert.Name = m.certName
 
-	_, err := m.certClient.Certificates("default").Create(kubeCert)
+	zap.L().Info("Creating new certificate object on Kube API", zap.String("certName", m.certName))
+	_, err = m.certClient.Certificates("default").Create(kubeCert)
 	if err != nil {
 		return fmt.Errorf("Couldn't create CSR Kube object %s", err)
 	}
@@ -123,8 +138,7 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 			return fmt.Errorf("Timed out for certificate generation")
 
 		case <-tickerChan:
-			fmt.Printf("Next iteration \n")
-
+			zap.L().Info("Verifying if Certificate was issued by controller...", zap.String("certName", m.certName))
 			cert, err := m.certClient.Certificates("default").Get(m.certName, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("Existing CSR object deleted %s", err)
@@ -132,9 +146,9 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 
 			if cert.Status.Certificate != nil {
 				fmt.Printf("Cert is available: %+v", cert.Status.Certificate)
+
 				return nil
 			}
-
 		}
 	}
 }
