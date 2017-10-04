@@ -54,6 +54,13 @@ func main() {
 		fmt.Printf("Error Sending and waiting %s", err)
 	}
 
+	cert, err := certManager.GetCert()
+	if err != nil {
+		fmt.Printf("Error Getting cert %s", err)
+	}
+
+	fmt.Printf("Received certificate: %+v ", cert)
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	zap.L().Info("Everything started. Waiting for Stop signal")
