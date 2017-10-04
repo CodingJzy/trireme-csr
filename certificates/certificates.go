@@ -114,27 +114,27 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 		return fmt.Errorf("Couldn't create CSR Kube object %s", err)
 	}
 
-	watcher, err := m.certClient.Certificates("default").Watch(metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("Couldn't open a watcher for certificates %s", err)
-	}
-	resultChan := watcher.ResultChan()
 	timeoutChan := time.After(timeout)
+	tickerChan := time.NewTicker(time.Second).C
+
 	for {
 		select {
 		case <-timeoutChan:
 			return fmt.Errorf("Timed out for certificate generation")
 
-		case event := <-resultChan:
-			fmt.Printf("Received an event %+v", event)
-			if event.Object != nil {
-				certKube := event.Object.(*certificatev1alpha1.Certificate)
-				if certKube.GetName() == m.certName {
-					if certKube.Status.Certificate != nil {
-						return nil
-					}
-				}
+		case <-tickerChan:
+			fmt.Printf("Next iteration \n")
+
+			cert, err := m.certClient.Certificates("default").Get(m.certName, metav1.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("Existing CSR object deleted %s", err)
 			}
+
+			if cert.Status.Certificate != nil {
+				fmt.Printf("Cert is available: %+v", cert.Status.Certificate)
+				return nil
+			}
+
 		}
 	}
 }

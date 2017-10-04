@@ -7,10 +7,12 @@ import (
 const CertificateResourcePlural = "certificates"
 
 type Certificate struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              CertificateSpec   `json:"spec"`
-	Status            CertificateStatus `json:"status,omitempty"`
+	Spec              CertificateSpec `json:"spec"`
+	// +optional
+	Status CertificateStatus `json:"status,omitempty"`
 }
 
 // CertificateSpec is the specification for Certificates on the API
@@ -38,6 +40,7 @@ const (
 // CertificateList represents a list of certificate
 type CertificateList struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ListMeta `json:"metadata"`
 	Items           []Certificate `json:"items"`
 }
