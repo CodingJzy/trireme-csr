@@ -14,7 +14,7 @@ import (
 // CertificateController contains all the logic to implement the issuance of certificates.
 type CertificateController struct {
 	certificateClient *certificateclient.CertificateClient
-	signer            *certificates.Issuer
+	issuer            *certificates.Issuer
 }
 
 var certPath = "/Users/bvandewa/golang/src/github.com/aporeto-inc/trireme-csr/testdata/private/ca.cert.pem"
@@ -24,14 +24,14 @@ var certPass = "test"
 // NewCertificateController generates the new CertificateController
 func NewCertificateController(certificateClient *certificateclient.CertificateClient, ca string) *CertificateController {
 
-	signer, err := certificates.NewIssuerFromPath(certPath, certKeyPath, certPass)
+	issuer, err := certificates.NewIssuerFromPath(certPath, certKeyPath, certPass)
 	if err != nil {
-		fmt.Printf("Error creating new Signer %s", err)
+		fmt.Printf("Error creating new Issuer %s", err)
 	}
 
 	return &CertificateController{
 		certificateClient: certificateClient,
-		signer:            signer,
+		issuer:            issuer,
 	}
 }
 
@@ -82,16 +82,16 @@ func (c *CertificateController) onAdd(obj interface{}) {
 		fmt.Printf("Error loading cert: %s\n", err)
 	}
 
-	cert, err := c.signer.Sign(csr)
+	cert, err := c.issuer.Sign(csr)
 	if err != nil {
 		fmt.Printf("Error issuing cert: %s\n", err)
 	}
 	fmt.Printf("Cert generated: %s\n", cert)
 
 	certRequest.Status.Certificate = cert
+	certRequest.Status.State = certificatev1alpha1.CertificateStateCreated
 
 	c.certificateClient.Certificates(certRequest.Namespace).Update(certRequest)
-
 }
 
 func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
