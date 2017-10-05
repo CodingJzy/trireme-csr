@@ -11,6 +11,8 @@ import (
 	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
 	"github.com/aporeto-inc/trireme-csr/certificates"
 	certificateclient "github.com/aporeto-inc/trireme-csr/client"
+
+	"github.com/aporeto-inc/tg/tglib"
 )
 
 // CertificateController contains all the logic to implement the issuance of certificates.
@@ -41,11 +43,10 @@ func NewCertificateController(certificateClient *certificateclient.CertificateCl
 func (c *CertificateController) Run() error {
 	zap.L().Warn("start watching Certificates objects")
 
-	// Watch Example objects
+	// Watch Certificate objects
 	_, err := c.watchCerts()
 	if err != nil {
-		zap.L().Error("Failed to register watch for Certificate CRD resource: %v\n", zap.Error(err))
-		return err
+		return fmt.Errorf("failed to register watch for Certificate CRD resource: %s", err)
 	}
 
 	return nil
@@ -60,11 +61,8 @@ func (c *CertificateController) watchCerts() (cache.Controller, error) {
 
 	_, controller := cache.NewInformer(
 		source,
-
 		&certificatev1alpha1.Certificate{},
-
 		0,
-
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.onAdd,
 			UpdateFunc: c.onUpdate,
@@ -78,11 +76,20 @@ func (c *CertificateController) watchCerts() (cache.Controller, error) {
 func (c *CertificateController) onAdd(obj interface{}) {
 	zap.L().Debug("Adding Cert event")
 	certRequest := obj.(*certificatev1alpha1.Certificate)
-	csr, err := certificates.LoadCSR(certRequest.Spec.Request)
+	csr, err := tglib.LoadCSR(certRequest.Spec.Request)
 	if err != nil {
 		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 		return
 	}
+
+	zap.L().Info("Validating cert request", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+
+	err = c.issuer.Validate(csr)
+	if err != nil {
+		zap.L().Error("CSR has not been validated", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+		return
+	}
+	zap.L().Info("Cert request has been accepted", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 
 	cert, err := c.issuer.Sign(csr)
 	if err != nil {

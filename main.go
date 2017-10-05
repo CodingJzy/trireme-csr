@@ -34,12 +34,16 @@ func main() {
 	}
 
 	// start a controller on instances of the Certificates custom resource
-	certController := certificatecontroller.NewCertificateController(certClient, "")
+	certController, err := certificatecontroller.NewCertificateController(certClient, "")
+	if err != nil {
+		panic("Couldn't create CertificateController" + err.Error())
+	}
+
 	go certController.Run()
 
 	waitForSig()
 
-	zap.L().Info("Trireme-CSR clean exit")
+	zap.L().Info("Trireme-CSR exiting")
 }
 
 // setLogs setups Zap to the specified logLevel.
