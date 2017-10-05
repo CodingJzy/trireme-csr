@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/aporeto-inc/trireme-csr/certificates"
 	"github.com/aporeto-inc/trireme-csr/config"
@@ -12,18 +13,18 @@ import (
 	certificatecontroller "github.com/aporeto-inc/trireme-csr/controller"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 func main() {
-	setLogs("info")
-
 	config, err := config.LoadConfig()
 	if err != nil {
 		panic("Error generating config: " + err.Error())
 	}
+	setLogs(config.LogFormat, config.LogLevel)
 
 	issuer, err := certificates.NewTriremeIssuerFromPath(config.SigningCACert, config.SigningCACertKey, config.SigningCACertKeyPass)
 	if err != nil {
@@ -55,9 +56,20 @@ func main() {
 }
 
 // setLogs setups Zap to the specified logLevel.
-func setLogs(logLevel string) error {
-	zapConfig := zap.NewDevelopmentConfig()
-	zapConfig.DisableStacktrace = true
+func setLogs(format, logLevel string) error {
+	var zapConfig zap.Config
+
+	switch format {
+	case "json":
+		zapConfig = zap.NewProductionConfig()
+		zapConfig.DisableStacktrace = true
+	default:
+		zapConfig = zap.NewDevelopmentConfig()
+		zapConfig.DisableStacktrace = true
+		zapConfig.DisableCaller = true
+		zapConfig.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {}
+		zapConfig.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	}
 
 	// Set the logger
 	switch logLevel {

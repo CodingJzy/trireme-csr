@@ -36,7 +36,7 @@ func NewCertificateController(certificateClient *certificateclient.CertificateCl
 
 // Run starts the certificateWatcher.
 func (c *CertificateController) Run() error {
-	zap.L().Warn("start watching Certificates objects")
+	zap.L().Info("start watching Certificates objects")
 
 	// Watch Certificate objects
 	_, err := c.watchCerts()
@@ -91,7 +91,9 @@ func (c *CertificateController) onAdd(obj interface{}) {
 		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 		return
 	}
-	zap.L().Info("Cert successfully generated", zap.ByteString("cert", cert))
+	zap.L().Info("Cert successfully generated", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+
+	zap.L().Debug("Cert successfully generated", zap.ByteString("cert", cert))
 
 	certRequest.Status.Certificate = cert
 	certRequest.Status.State = certificatev1alpha1.CertificateStateCreated

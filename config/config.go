@@ -13,10 +13,10 @@ import (
 // DefaultKubeConfigLocation is the default location of the KubeConfig file.
 const DefaultKubeConfigLocation = "/.kube/config"
 
-// Configuration contains all the User Parameter for Trireme-Kubernetes.
+// Configuration contains all the User Parameter for Trireme-CSR.
 type Configuration struct {
-	// AuthType defines if Trireme uses PSK or PKI
-	InstallCRD bool
+	KubeconfigPath string
+	InstallCRD     bool
 
 	GenerateCA bool
 
@@ -26,8 +26,8 @@ type Configuration struct {
 	SigningCACertKeyData []byte
 	SigningCACertKeyPass string
 
-	KubeconfigPath string
-	LogLevel       string
+	LogFormat string
+	LogLevel  string
 }
 
 func usage() {
@@ -42,17 +42,21 @@ func usage() {
 func LoadConfig() (*Configuration, error) {
 	flag.Usage = usage
 	flag.Bool("InstallCRD", false, "Install CRD if not initialized ?")
+	flag.Bool("GenerateCA", false, "Generate CA for temporary use")
 	flag.String("KubeconfigPath", "", "KubeConfig used to connect to Kubernetes")
 	flag.String("LogLevel", "", "Log level. Default to info (trace//debug//info//warn//error//fatal)")
+	flag.String("LogFormat", "", "Log Format. Default to json (trace//debug//info//warn//error//fatal)")
 
 	flag.String("SigningCacert", "", "Path to the CA that will issue certificates.")
-	flag.String("signingCacertKey", "", "Path to the CA key that will issue certificates.")
-	flag.String("SigningCacertPass", "", "Password for the signing CA.")
+	flag.String("SigningCacertKey", "", "Path to the CA key that will issue certificates.")
+	flag.String("SigningCacertKeyPass", "", "Password for the signing CA.")
 
 	// Setting up default configuration
 	viper.SetDefault("InstallCRD", false)
+	viper.SetDefault("GenerateCA", false)
 	viper.SetDefault("KubeconfigPath", "")
 	viper.SetDefault("LogLevel", "info")
+	viper.SetDefault("LogFormat", "human")
 
 	// Binding ENV variables
 	// Each config will be of format TRIREME_XYZ as env variable, where XYZ
@@ -91,18 +95,20 @@ func validateConfig(config *Configuration) error {
 		config.KubeconfigPath = ""
 	}
 
-	signingcadata, err := ioutil.ReadFile(config.SigningCACert)
-	if err != nil {
-		return fmt.Errorf("unable to read signing CA file: %s", err.Error())
-	}
+	if !config.GenerateCA {
+		signingcadata, err := ioutil.ReadFile(config.SigningCACert)
+		if err != nil {
+			return fmt.Errorf("unable to read signing CA file: %s", err.Error())
+		}
 
-	signingcakeydata, err := ioutil.ReadFile(config.SigningCACertKey)
-	if err != nil {
-		return fmt.Errorf("unable to read signing CA key file: %s", err.Error())
-	}
+		signingcakeydata, err := ioutil.ReadFile(config.SigningCACertKey)
+		if err != nil {
+			return fmt.Errorf("unable to read signing CA key file: %s", err.Error())
+		}
 
-	config.SigningCACertData = signingcadata
-	config.SigningCACertKeyData = signingcakeydata
+		config.SigningCACertData = signingcadata
+		config.SigningCACertKeyData = signingcakeydata
+	}
 
 	return nil
 }
