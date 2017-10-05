@@ -5,17 +5,16 @@ import (
 	"os/signal"
 	"syscall"
 
-	"go.uber.org/zap"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-
 	"github.com/aporeto-inc/trireme-csr/certificates"
 	"github.com/aporeto-inc/trireme-csr/config"
 
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	certificateclient "github.com/aporeto-inc/trireme-csr/client"
 	certificatecontroller "github.com/aporeto-inc/trireme-csr/controller"
+
+	"go.uber.org/zap"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func main() {

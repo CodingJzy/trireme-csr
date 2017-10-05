@@ -2,3 +2,4 @@ cmd/ClientEmulator/ClientEmulator
 vendor/
 trireme-csr
 glide.lock
+run.sh

@@ -1,7 +1,7 @@
 package version
 
-// VERSION is the version of Trireme-Kubernetes
+// VERSION is the version of Trireme-CSR
 const VERSION = "0.11"
 
-// REVISION is the revision of Trireme-Kubernetes
-const REVISION = "7c7a3816675e0b6e88bd52d627869945a68452e0"
+// REVISION is the revision of Trireme-CSR
+const REVISION = "81141049605f61ef5cd8939c6cd63d7a87b2853c"

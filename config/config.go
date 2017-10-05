@@ -50,7 +50,7 @@ func LoadConfig() (*Configuration, error) {
 	flag.String("SigningCacertPass", "", "Password for the signing CA.")
 
 	// Setting up default configuration
-	viper.SetDefault("InstallCRD", "PSK")
+	viper.SetDefault("InstallCRD", false)
 	viper.SetDefault("KubeconfigPath", "")
 	viper.SetDefault("LogLevel", "info")
 

@@ -10,10 +10,10 @@ DOCKER_IMAGE_TAG?=$(BUILD_NUMBER)
 codegen:
 	echo 'package version' > $(VERSION_FILE)
 	echo '' >> $(VERSION_FILE)
-	echo '// VERSION is the version of Trireme-Kubernetes' >> $(VERSION_FILE)
+	echo '// VERSION is the version of Trireme-CSR' >> $(VERSION_FILE)
 	echo 'const VERSION = "$(VERSION)"' >> $(VERSION_FILE)
 	echo '' >> $(VERSION_FILE)
-	echo '// REVISION is the revision of Trireme-Kubernetes' >> $(VERSION_FILE)
+	echo '// REVISION is the revision of Trireme-CSR' >> $(VERSION_FILE)
 	echo 'const REVISION = "$(REVISION)"' >> $(VERSION_FILE)
 
 build: codegen
