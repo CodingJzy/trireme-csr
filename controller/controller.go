@@ -6,6 +6,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 
+	"go.uber.org/zap"
+
 	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
 	"github.com/aporeto-inc/trireme-csr/certificates"
 	certificateclient "github.com/aporeto-inc/trireme-csr/client"
@@ -22,27 +24,27 @@ var certKeyPath = "/Users/bvandewa/golang/src/github.com/aporeto-inc/trireme-csr
 var certPass = "test"
 
 // NewCertificateController generates the new CertificateController
-func NewCertificateController(certificateClient *certificateclient.CertificateClient, ca string) *CertificateController {
+func NewCertificateController(certificateClient *certificateclient.CertificateClient, ca string) (*CertificateController, error) {
 
 	issuer, err := certificates.NewIssuerFromPath(certPath, certKeyPath, certPass)
 	if err != nil {
-		fmt.Printf("Error creating new Issuer %s", err)
+		return nil, fmt.Errorf("Error creating new Issuer %s", err)
 	}
 
 	return &CertificateController{
 		certificateClient: certificateClient,
 		issuer:            issuer,
-	}
+	}, nil
 }
 
 // Run starts the certificateWatcher.
 func (c *CertificateController) Run() error {
-	fmt.Print("Watch Certificates objects\n")
+	zap.L().Warn("start watching Certificates objects")
 
 	// Watch Example objects
 	_, err := c.watchCerts()
 	if err != nil {
-		fmt.Printf("Failed to register watch for Example resource: %v\n", err)
+		zap.L().Error("Failed to register watch for Certificate CRD resource: %v\n", zap.Error(err))
 		return err
 	}
 
@@ -74,19 +76,20 @@ func (c *CertificateController) watchCerts() (cache.Controller, error) {
 }
 
 func (c *CertificateController) onAdd(obj interface{}) {
-	fmt.Printf("AddingCert: %v\n", obj)
+	zap.L().Debug("Adding Cert event")
 	certRequest := obj.(*certificatev1alpha1.Certificate)
-	fmt.Printf("AddingCert: %v\n", certRequest)
 	csr, err := certificates.LoadCSR(certRequest.Spec.Request)
 	if err != nil {
-		fmt.Printf("Error loading cert: %s\n", err)
+		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+		return
 	}
 
 	cert, err := c.issuer.Sign(csr)
 	if err != nil {
-		fmt.Printf("Error issuing cert: %s\n", err)
+		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+		return
 	}
-	fmt.Printf("Cert generated: %s\n", cert)
+	zap.L().Info("Cert successfully generated", zap.ByteString("cert", cert))
 
 	certRequest.Status.Certificate = cert
 	certRequest.Status.State = certificatev1alpha1.CertificateStateCreated
@@ -95,9 +98,9 @@ func (c *CertificateController) onAdd(obj interface{}) {
 }
 
 func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
-	fmt.Printf("UpdatingCert: %v\n", newObj)
+	zap.L().Debug("UpdatingCert")
 }
 
 func (c *CertificateController) onDelete(obj interface{}) {
-	fmt.Printf("DeletingCert: %v\n", obj)
+	zap.L().Debug("DeletingCert")
 }
