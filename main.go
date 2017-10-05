@@ -9,34 +9,43 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/aporeto-inc/trireme-csr/certificates"
+	"github.com/aporeto-inc/trireme-csr/config"
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	certificateclient "github.com/aporeto-inc/trireme-csr/client"
 	certificatecontroller "github.com/aporeto-inc/trireme-csr/controller"
 )
 
-// KubeconfigPath is the static path to my KubeConfig
-// TODO: remove
-const KubeconfigPath = "/Users/bvandewa/.kube/config"
-
 func main() {
 	setLogs("info")
 
-	// Get the Kube API interface for Certificates up
-	config, err := buildConfig(KubeconfigPath)
+	config, err := config.LoadConfig()
 	if err != nil {
-		panic(err)
+		panic("Error generating config: " + err.Error())
 	}
 
-	certClient, _, err := certificateclient.NewClient(config)
+	issuer, err := certificates.NewTriremeIssuerFromPath(config.SigningCACert, config.SigningCACertKey, config.SigningCACertKeyPass)
+	if err != nil {
+		panic("Error creating Certificate Issuer " + err.Error())
+	}
+
+	// Get the Kube API interface for Certificates up
+	kubeconfig, err := buildConfig(config.KubeconfigPath)
+	if err != nil {
+		panic("Error generating Kubeconfig " + err.Error())
+	}
+
+	certClient, _, err := certificateclient.NewClient(kubeconfig)
 	if err != nil {
 		panic("Error creating REST Kube Client for certificates: " + err.Error())
 	}
 
 	// start a controller on instances of the Certificates custom resource
-	certController, err := certificatecontroller.NewCertificateController(certClient, "")
+	certController, err := certificatecontroller.NewCertificateController(certClient, issuer)
 	if err != nil {
-		panic("Couldn't create CertificateController" + err.Error())
+		panic("Error creating CertificateController" + err.Error())
 	}
 
 	go certController.Run()

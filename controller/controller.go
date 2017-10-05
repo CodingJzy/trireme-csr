@@ -18,7 +18,7 @@ import (
 // CertificateController contains all the logic to implement the issuance of certificates.
 type CertificateController struct {
 	certificateClient *certificateclient.CertificateClient
-	issuer            *certificates.Issuer
+	issuer            certificates.Issuer
 }
 
 var certPath = "/Users/bvandewa/golang/src/github.com/aporeto-inc/trireme-csr/testdata/private/ca.cert.pem"
@@ -26,12 +26,7 @@ var certKeyPath = "/Users/bvandewa/golang/src/github.com/aporeto-inc/trireme-csr
 var certPass = "test"
 
 // NewCertificateController generates the new CertificateController
-func NewCertificateController(certificateClient *certificateclient.CertificateClient, ca string) (*CertificateController, error) {
-
-	issuer, err := certificates.NewIssuerFromPath(certPath, certKeyPath, certPass)
-	if err != nil {
-		return nil, fmt.Errorf("Error creating new Issuer %s", err)
-	}
+func NewCertificateController(certificateClient *certificateclient.CertificateClient, issuer certificates.Issuer) (*CertificateController, error) {
 
 	return &CertificateController{
 		certificateClient: certificateClient,

@@ -15,39 +15,45 @@ import (
 	"github.com/aporeto-inc/tg/tglib"
 )
 
-// Issuer takes CSRs and issues valid certificates based on a valid CA
-type Issuer struct {
+// Issuer is able to validate and sign certificates baed on a CSR.
+type Issuer interface {
+	Validate(csr *x509.CertificateRequest) error
+	Sign(csr *x509.CertificateRequest) ([]byte, error)
+}
+
+// TriremeIssuer takes CSRs and issues valid certificates based on a valid CA
+type TriremeIssuer struct {
 	signingCert    *x509.Certificate
 	signingKey     crypto.PrivateKey
 	signingKeyPass string
 }
 
-// NewIssuer creates an issuer based on crypto CA objects
-func NewIssuer(signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*Issuer, error) {
-	return &Issuer{
+// NewTriremeIssuer creates an issuer based on crypto CA objects
+func NewTriremeIssuer(signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*TriremeIssuer, error) {
+	return &TriremeIssuer{
 		signingCert:    signingCert,
 		signingKey:     signingKey,
 		signingKeyPass: signingKeyPass,
 	}, nil
 }
 
-// NewIssuerFromPath creates an issuer based on the path of PEM encoded crypto primitives
-func NewIssuerFromPath(signingCertPath, signingCertKeyPath, signingKeyPass string) (*Issuer, error) {
+// NewTriremeIssuerFromPath creates an issuer based on the path of PEM encoded crypto primitives
+func NewTriremeIssuerFromPath(signingCertPath, signingCertKeyPath, signingKeyPass string) (*TriremeIssuer, error) {
 	signingCert, signingKey, err := tglib.ReadCertificatePEM(signingCertPath, signingCertKeyPath, signingKeyPass)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewIssuer(signingCert, signingKey, signingKeyPass)
+	return NewTriremeIssuer(signingCert, signingKey, signingKeyPass)
 }
 
 // Validate verifys that the CSR is allowed to be issued. Return an error if not allowed.
-func (s *Issuer) Validate(csr *x509.CertificateRequest) error {
+func (i *TriremeIssuer) Validate(csr *x509.CertificateRequest) error {
 	return nil
 }
 
 // Sign generate a signed and valid certificate for the CSR given as parameter
-func (s *Issuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
+func (i *TriremeIssuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 
 	// Generate random serial number.
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -70,7 +76,7 @@ func (s *Issuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 		DNSNames:              csr.DNSNames,
 	}
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, s.signingCert, csr.PublicKey, s.signingKey)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, i.signingCert, csr.PublicKey, i.signingKey)
 	if err != nil {
 		zap.L().Error("Failed to create certificate", zap.Error(err))
 		return nil, fmt.Errorf("Failed to create certificate")
