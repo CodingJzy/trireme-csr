@@ -109,6 +109,7 @@ func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
 	// Checking if the Status is already a generated Cert:
 	if certRequest.Status.Certificate != nil {
 		zap.L().Debug("Updated Cert request has already been processed", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+		return
 	}
 
 	zap.L().Info("Cert Request updated still has to be generated", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))

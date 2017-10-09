@@ -33,6 +33,9 @@ type CertManager struct {
 	certPEM []byte
 	cert    *x509.Certificate
 
+	caCertPEM []byte
+	caCert    *x509.Certificate
+
 	certClient *certificateclient.CertificateClient
 }
 
@@ -122,6 +125,24 @@ func (m *CertManager) GetCertPEM() ([]byte, error) {
 	return certPEM, nil
 }
 
+// GetCaCert return the privateKey
+func (m *CertManager) GetCaCert() (*x509.Certificate, error) {
+	if m.cert == nil {
+		return nil, fmt.Errorf("Cert is not received yet")
+	}
+	return m.cert, nil
+}
+
+// GetCaCertPEM return the privateKey in PEM format
+func (m *CertManager) GetCaCertPEM() ([]byte, error) {
+	if m.cert == nil {
+		return nil, fmt.Errorf("Cert is not received yet")
+	}
+
+	caCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: m.caCertPEM})
+	return caCertPEM, nil
+}
+
 // SendAndWaitforCert is a blocking func that issue the CertificateRequest and
 // returns once the Certificate is available.
 func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
@@ -174,6 +195,12 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 				m.cert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
 				if err != nil {
 					return fmt.Errorf("Couldn't parse certificate %s", err)
+				}
+
+				m.caCertPEM = cert.Status.Ca
+				m.caCert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
+				if err != nil {
+					return fmt.Errorf("Couldn't parse CA certificate %s", err)
 				}
 
 				return nil
