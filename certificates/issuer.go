@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"time"
 
@@ -19,19 +20,24 @@ import (
 type Issuer interface {
 	Validate(csr *x509.CertificateRequest) error
 	Sign(csr *x509.CertificateRequest) ([]byte, error)
+	GetCACert() []byte
 }
 
 // TriremeIssuer takes CSRs and issues valid certificates based on a valid CA
 type TriremeIssuer struct {
 	signingCert    *x509.Certificate
+	signingCertPEM []byte
 	signingKey     crypto.PrivateKey
 	signingKeyPass string
 }
 
 // NewTriremeIssuer creates an issuer based on crypto CA objects
-func NewTriremeIssuer(signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*TriremeIssuer, error) {
+// TODO: Remove the double reference to the SigningCert.
+func NewTriremeIssuer(signingCertPEM []byte, signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*TriremeIssuer, error) {
+
 	return &TriremeIssuer{
 		signingCert:    signingCert,
+		signingCertPEM: signingCertPEM,
 		signingKey:     signingKey,
 		signingKeyPass: signingKeyPass,
 	}, nil
@@ -44,7 +50,12 @@ func NewTriremeIssuerFromPath(signingCertPath, signingCertKeyPath, signingKeyPas
 		return nil, err
 	}
 
-	return NewTriremeIssuer(signingCert, signingKey, signingKeyPass)
+	caCertPEM, err := LoadCertPEM(signingCertPath)
+	if err != nil {
+		return nil, fmt.Errorf("Error loading CaCertFile %s", err)
+	}
+
+	return NewTriremeIssuer(caCertPEM, signingCert, signingKey, signingKeyPass)
 }
 
 // Validate verifys that the CSR is allowed to be issued. Return an error if not allowed.
@@ -87,4 +98,19 @@ func (i *TriremeIssuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 	certificatePem := bytes.TrimSpace(clientCertificate)
 
 	return certificatePem, nil
+}
+
+// GetCACert returns the CA Certificate that is used for this issuer.
+func (i *TriremeIssuer) GetCACert() []byte {
+	return i.signingCertPEM
+}
+
+// LoadCertPEM returns the byte array of the PEM encoded Cert.
+func LoadCertPEM(signingCertPath string) ([]byte, error) {
+	certPemBytes, err := ioutil.ReadFile(signingCertPath)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to read certificate %s", err)
+	}
+
+	return certPemBytes, nil
 }

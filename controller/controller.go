@@ -96,6 +96,7 @@ func (c *CertificateController) onAdd(obj interface{}) {
 	zap.L().Debug("Cert successfully generated", zap.ByteString("cert", cert))
 
 	certRequest.Status.Certificate = cert
+	certRequest.Status.Ca = c.issuer.GetCACert()
 	certRequest.Status.State = certificatev1alpha1.CertificateStateCreated
 
 	c.certificateClient.Certificates(certRequest.Namespace).Update(certRequest)
