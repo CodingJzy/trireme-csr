@@ -29,7 +29,7 @@ import:
 
 - package: github.com/aporeto-inc/tg
   vcs: git
-  version: master
+  version: add_load_csr
   repo: git@github.com:bvandewalle/tg.git
 
 ## ONLY NEEDED because of Glide issue with Capital and Lowercase mixup
