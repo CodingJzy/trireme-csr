@@ -31,12 +31,3 @@ import:
   vcs: git
   version: add_load_csr
   repo: git@github.com:bvandewalle/tg.git
-
-## ONLY NEEDED because of Glide issue with Capital and Lowercase mixup
-## https://github.com/sirupsen/logrus/issues/570#issuecomment-313933276
-- package: github.com/sirupsen/logrus
-  version: master
-- package: github.com/Sirupsen/logrus
-  repo: git@github.com:/sirupsen/logrus
-  vcs: git
-  version: master
