@@ -20,7 +20,7 @@ build: codegen
 	CGO_ENABLED=1 go build -a -installsuffix cgo
 
 package: build
-	mv trireme-kubernetes docker/trireme-csr
+	mv trireme-csr docker/trireme-csr
 
 docker_build: package
 	docker \
