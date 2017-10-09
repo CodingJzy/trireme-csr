@@ -45,7 +45,7 @@ func LoadConfig() (*Configuration, error) {
 	flag.Bool("GenerateCA", false, "Generate CA for temporary use")
 	flag.String("KubeconfigPath", "", "KubeConfig used to connect to Kubernetes")
 	flag.String("LogLevel", "", "Log level. Default to info (trace//debug//info//warn//error//fatal)")
-	flag.String("LogFormat", "", "Log Format. Default to json (trace//debug//info//warn//error//fatal)")
+	flag.String("LogFormat", "", "Log Format. Default to human")
 
 	flag.String("SigningCacert", "", "Path to the CA that will issue certificates.")
 	flag.String("SigningCacertKey", "", "Path to the CA key that will issue certificates.")

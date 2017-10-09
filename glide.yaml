@@ -20,10 +20,18 @@ import:
   - rest
   - tools/cache
   - tools/clientcmd
-- package: github.com/golang/glog
 - package: github.com/spf13/pflag
   version: ^1.0.0
 - package: github.com/spf13/viper
   version: ^1.0.0
 - package: go.uber.org/zap
   version: ^1.5.0
+
+## ONLY NEEDED because of Glide issue with Capital and Lowercase mixup
+## https://github.com/sirupsen/logrus/issues/570#issuecomment-313933276
+- package: github.com/sirupsen/logrus
+  version: master
+- package: github.com/Sirupsen/logrus
+  repo: git@github.com:/sirupsen/logrus
+  vcs: git
+  version: master
