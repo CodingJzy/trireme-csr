@@ -4,8 +4,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// CertificateResourcePlural is the ressource name used to get a list of cetts.
 const CertificateResourcePlural = "certificates"
 
+// Certificate is the specification for the Certificate object on the Kubernetes API
 type Certificate struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -25,6 +27,7 @@ type CertificateSpec struct {
 type CertificateStatus struct {
 	State       CertificateState `json:"state,omitempty"`
 	Certificate []byte           `json:"certificate,omitempty" protobuf:"bytes,2,opt,name=certificate"`
+	Ca          []byte           `json:"ca,omitempty" protobuf:"bytes,2,opt,name=certificate"`
 }
 
 // CertificateState defines the state of the certificate
