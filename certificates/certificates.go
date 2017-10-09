@@ -1,7 +1,8 @@
 package certificates
 
 import (
-	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -25,10 +26,12 @@ import (
 type CertManager struct {
 	certName   string
 	keyPass    string
-	privateKey crypto.PrivateKey
+	privateKey *ecdsa.PrivateKey
 	// CSR is encoded in PEM format.
-	csr  []byte
-	cert *x509.Certificate
+	csr []byte
+
+	certPEM []byte
+	cert    *x509.Certificate
 
 	certClient *certificateclient.CertificateClient
 }
@@ -43,7 +46,7 @@ func NewCertManager(name string, certClient *certificateclient.CertificateClient
 
 // GeneratePrivateKey generate the private key that will be used for this Certificate.
 func (m *CertManager) GeneratePrivateKey() error {
-	privateKey, err := tglib.ECPrivateKeyGenerator()
+	privateKey, err := ECPrivateKeyGenerator()
 	m.privateKey = privateKey
 	if err != nil {
 		return err
@@ -86,16 +89,37 @@ func (m *CertManager) GenerateCSR() error {
 }
 
 // GetKey return the privateKey
-func (m *CertManager) GetKey() crypto.PrivateKey {
+func (m *CertManager) GetKey() *ecdsa.PrivateKey {
 	return m.privateKey
+}
+
+// GetKeyPEM return the privateKey in PEM format
+func (m *CertManager) GetKeyPEM() ([]byte, error) {
+	keybyte, err := x509.MarshalECPrivateKey(m.privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("Error marshaling ECDSA Private Key %s", err)
+	}
+
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keybyte})
+	return keyPEM, nil
 }
 
 // GetCert return the privateKey
 func (m *CertManager) GetCert() (*x509.Certificate, error) {
-	if m.cert != nil {
-		return m.cert, nil
+	if m.cert == nil {
+		return nil, fmt.Errorf("Cert is not received yet")
 	}
-	return nil, fmt.Errorf("Cert is not received yet")
+	return m.cert, nil
+}
+
+// GetCertPEM return the privateKey in PEM format
+func (m *CertManager) GetCertPEM() ([]byte, error) {
+	if m.cert == nil {
+		return nil, fmt.Errorf("Cert is not received yet")
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: m.certPEM})
+	return certPEM, nil
 }
 
 // SendAndWaitforCert is a blocking func that issue the CertificateRequest and
@@ -146,6 +170,7 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 
 			if cert.Status.Certificate != nil {
 				fmt.Printf("Cert is available: %+v", cert.Status.Certificate)
+				m.certPEM = cert.Status.Certificate
 				m.cert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
 				if err != nil {
 					return fmt.Errorf("Couldn't parse certificate %s", err)
@@ -163,4 +188,9 @@ func (m *CertManager) IsIssued() bool {
 		return true
 	}
 	return false
+}
+
+// ECPrivateKeyGenerator generates a ECDSA private key.
+func ECPrivateKeyGenerator() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
