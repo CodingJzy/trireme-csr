@@ -71,11 +71,17 @@ func (c *CertificateController) watchCerts() (cache.Controller, error) {
 func (c *CertificateController) onAdd(obj interface{}) {
 	zap.L().Debug("Adding Cert event")
 	certRequest := obj.(*certificatev1alpha1.Certificate)
-	csr, err := tglib.LoadCSR(certRequest.Spec.Request)
+	csrs, err := tglib.LoadCSRs(certRequest.Spec.Request)
 	if err != nil {
 		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 		return
 	}
+	if len(csrs) > 1 {
+		zap.L().Error("Error loading CSR: 0 or more than 1 CSRs attached", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name), zap.Int("CSRAmount", len(csrs)))
+		return
+	}
+
+	csr := csrs[0]
 
 	zap.L().Info("Validating cert request", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 

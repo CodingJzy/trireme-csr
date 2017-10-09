@@ -26,8 +26,4 @@ import:
   version: ^1.0.0
 - package: go.uber.org/zap
   version: ^1.5.0
-
 - package: github.com/aporeto-inc/tg
-  vcs: git
-  version: add_load_csr
-  repo: git@github.com:bvandewalle/tg.git
