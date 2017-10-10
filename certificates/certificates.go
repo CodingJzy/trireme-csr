@@ -78,7 +78,7 @@ func (m *CertManager) GenerateCSR() error {
 	certRequest := x509.CertificateRequest{
 		RawSubject:         asn1Subj,
 		EmailAddresses:     []string{emailAddress},
-		SignatureAlgorithm: x509.ECDSAWithSHA256,
+		SignatureAlgorithm: x509.ECDSAWithSHA384,
 	}
 
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &certRequest, m.privateKey)
