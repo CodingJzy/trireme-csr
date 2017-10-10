@@ -121,26 +121,25 @@ func (m *CertManager) GetCertPEM() ([]byte, error) {
 		return nil, fmt.Errorf("Cert is not received yet")
 	}
 
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: m.certPEM})
-	return certPEM, nil
+	return m.certPEM, nil
 }
 
 // GetCaCert return the privateKey
 func (m *CertManager) GetCaCert() (*x509.Certificate, error) {
-	if m.cert == nil {
+	if m.caCert == nil {
 		return nil, fmt.Errorf("Cert is not received yet")
 	}
-	return m.cert, nil
+
+	return m.caCert, nil
 }
 
 // GetCaCertPEM return the privateKey in PEM format
 func (m *CertManager) GetCaCertPEM() ([]byte, error) {
-	if m.cert == nil {
+	if m.caCertPEM == nil {
 		return nil, fmt.Errorf("Cert is not received yet")
 	}
 
-	caCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: m.caCertPEM})
-	return caCertPEM, nil
+	return m.caCertPEM, nil
 }
 
 // SendAndWaitforCert is a blocking func that issue the CertificateRequest and

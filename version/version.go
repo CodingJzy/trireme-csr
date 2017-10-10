@@ -4,4 +4,4 @@ package version
 const VERSION = "0.11"
 
 // REVISION is the revision of Trireme-CSR
-const REVISION = "58a70f334ac0cfd025c3da14cf99fc8dc10c6c7a"
+const REVISION = "7407841e348ed4e1b34b3131042f0390dcbd5172"
