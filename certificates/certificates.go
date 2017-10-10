@@ -153,9 +153,7 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 	}
 	for _, cert := range certs.Items {
 		if cert.Name == m.certName {
-			if cert.Status.Certificate != nil {
-				return nil
-			}
+			m.certClient.Certificates("default").Delete(cert.Name, &metav1.DeleteOptions{})
 		}
 	}
 
