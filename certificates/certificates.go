@@ -62,7 +62,7 @@ func (m *CertManager) GenerateCSR() error {
 		[]string{"unit"},
 		"commonName",
 		[]string{emailAddress},
-		m.privateKey
+		m.privateKey,
 	)
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 	}
 	for _, cert := range certs.Items {
 		if cert.Name == m.certName {
-			if err:= m.certClient.Certificates("default").Delete(cert.Name, &metav1.DeleteOptions{}); err!= nil {
+			if err := m.certClient.Certificates("default").Delete(cert.Name, &metav1.DeleteOptions{}); err != nil {
 				return fmt.Errorf("Error deleting existing cert for node: %s", err)
 			}
 		}
