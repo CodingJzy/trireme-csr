@@ -58,6 +58,10 @@ func LoadConfig() (*Configuration, error) {
 	viper.SetDefault("LogLevel", "info")
 	viper.SetDefault("LogFormat", "human")
 
+	viper.SetDefault("SigningCacert", "")
+	viper.SetDefault("SigningCacertKey", "")
+	viper.SetDefault("SigningCacertKeyPass", "")
+
 	// Binding ENV variables
 	// Each config will be of format TRIREME_XYZ as env variable, where XYZ
 	// is the upper case config.
