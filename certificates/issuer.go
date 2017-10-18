@@ -3,15 +3,11 @@ package certificates
 import (
 	"bytes"
 	"crypto"
-	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"time"
-
-	"go.uber.org/zap"
 
 	"github.com/aporeto-inc/tg/tglib"
 )
@@ -28,7 +24,6 @@ type TriremeIssuer struct {
 	signingCert    *x509.Certificate
 	signingCertPEM []byte
 	signingKey     crypto.PrivateKey
-	signingKeyPass string
 }
 
 // NewTriremeIssuer creates an issuer based on crypto CA objects
@@ -39,7 +34,6 @@ func NewTriremeIssuer(signingCertPEM []byte, signingCert *x509.Certificate, sign
 		signingCert:    signingCert,
 		signingCertPEM: signingCertPEM,
 		signingKey:     signingKey,
-		signingKeyPass: signingKeyPass,
 	}, nil
 }
 
@@ -66,34 +60,23 @@ func (i *TriremeIssuer) Validate(csr *x509.CertificateRequest) error {
 // Sign generate a signed and valid certificate for the CSR given as parameter
 func (i *TriremeIssuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 
-	// Generate random serial number.
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	pemCert, _, err := tglib.SignCSR(csr,
+		i.signingCert,
+		i.signingKey,
+		time.Now(),
+		time.Now().AddDate(1, 0, 0),
+		x509.KeyUsageDigitalSignature|x509.KeyUsageKeyEncipherment,
+		[]x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		x509.ECDSAWithSHA384,
+		x509.ECDSA,
+		false,
+		nil,
+	)
 	if err != nil {
-		zap.L().Error("Failed to generate serial number for the certificate", zap.Error(err))
-		return nil, fmt.Errorf("Failed to generate serial number for the certificate")
+		return nil, fmt.Errorf("Failed to generate Cert: %s", err)
 	}
 
-	// Create certfificate template.
-	template := x509.Certificate{
-		SerialNumber:          serialNumber,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(1, 0, 0),
-		BasicConstraintsValid: true,
-		PublicKey:             csr.PublicKey,
-		PublicKeyAlgorithm:    csr.PublicKeyAlgorithm,
-		Subject:               csr.Subject,
-		EmailAddresses:        csr.EmailAddresses,
-		DNSNames:              csr.DNSNames,
-	}
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, i.signingCert, csr.PublicKey, i.signingKey)
-	if err != nil {
-		zap.L().Error("Failed to create certificate", zap.Error(err))
-		return nil, fmt.Errorf("Failed to create certificate")
-	}
-
-	clientCertificate := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	clientCertificate := pem.EncodeToMemory(pemCert)
 
 	certificatePem := bytes.TrimSpace(clientCertificate)
 

@@ -1,12 +1,8 @@
 package certificates
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
+	"crypto"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"time"
@@ -26,7 +22,7 @@ import (
 type CertManager struct {
 	certName   string
 	keyPass    string
-	privateKey *ecdsa.PrivateKey
+	privateKey crypto.PrivateKey
 	// CSR is encoded in PEM format.
 	csr []byte
 
@@ -49,7 +45,7 @@ func NewCertManager(name string, certClient *certificateclient.CertificateClient
 
 // GeneratePrivateKey generate the private key that will be used for this Certificate.
 func (m *CertManager) GeneratePrivateKey() error {
-	privateKey, err := ECPrivateKeyGenerator()
+	privateKey, err := tglib.ECPrivateKeyGenerator()
 	m.privateKey = privateKey
 	if err != nil {
 		return err
@@ -59,52 +55,37 @@ func (m *CertManager) GeneratePrivateKey() error {
 
 // GenerateCSR generates the CSR associated with the key
 func (m *CertManager) GenerateCSR() error {
-	oidEmailAddress := asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 	emailAddress := "aporeto@aporeto.com"
-	subj := pkix.Name{
-		CommonName:         "enforcerd",
-		Country:            []string{"US"},
-		Province:           []string{"Some-State"},
-		Locality:           []string{"MyCity"},
-		Organization:       []string{"Company Ltd"},
-		OrganizationalUnit: []string{"IT"},
-	}
-	rawSubj := subj.ToRDNSequence()
-	rawSubj = append(rawSubj, []pkix.AttributeTypeAndValue{
-		{Type: oidEmailAddress, Value: emailAddress},
-	})
 
-	asn1Subj, _ := asn1.Marshal(rawSubj)
-	certRequest := x509.CertificateRequest{
-		RawSubject:         asn1Subj,
-		EmailAddresses:     []string{emailAddress},
-		SignatureAlgorithm: x509.ECDSAWithSHA384,
-	}
-
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &certRequest, m.privateKey)
+	certRequest, err := tglib.GenerateSimpleCSR(
+		[]string{"trireme"},
+		[]string{"unit"},
+		"commonName",
+		[]string{emailAddress},
+		m.privateKey,
+	)
 	if err != nil {
-		return fmt.Errorf("Couldn't create CSR %s", err)
+		return err
 	}
 
-	m.csr = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes})
-
+	m.csr = certRequest
 	return nil
 }
 
 // GetKey return the privateKey
-func (m *CertManager) GetKey() *ecdsa.PrivateKey {
+func (m *CertManager) GetKey() crypto.PrivateKey {
 	return m.privateKey
 }
 
 // GetKeyPEM return the privateKey in PEM format
 func (m *CertManager) GetKeyPEM() ([]byte, error) {
-	keybyte, err := x509.MarshalECPrivateKey(m.privateKey)
+	keyPEM, err := tglib.KeyToPEM(m.privateKey)
 	if err != nil {
-		return nil, fmt.Errorf("Error marshaling ECDSA Private Key %s", err)
+		return nil, fmt.Errorf("Error marshaling Private Key %s", err)
 	}
 
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keybyte})
-	return keyPEM, nil
+	keyByte := pem.EncodeToMemory(keyPEM)
+	return keyByte, nil
 }
 
 // GetCert return the privateKey
@@ -153,7 +134,9 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 	}
 	for _, cert := range certs.Items {
 		if cert.Name == m.certName {
-			m.certClient.Certificates("default").Delete(cert.Name, &metav1.DeleteOptions{})
+			if err := m.certClient.Certificates("default").Delete(cert.Name, &metav1.DeleteOptions{}); err != nil {
+				return fmt.Errorf("Error deleting existing cert for node: %s", err)
+			}
 		}
 	}
 
@@ -204,17 +187,4 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 			}
 		}
 	}
-}
-
-// IsIssued returns true if the certificate is issued by the controller
-func (m *CertManager) IsIssued() bool {
-	if m.cert != nil {
-		return true
-	}
-	return false
-}
-
-// ECPrivateKeyGenerator generates a ECDSA private key.
-func ECPrivateKeyGenerator() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
