@@ -3,6 +3,7 @@ package certificates
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -10,12 +11,14 @@ import (
 	"time"
 
 	"github.com/aporeto-inc/tg/tglib"
+	"github.com/aporeto-inc/trireme/enforcer/utils/pkiverifier"
 )
 
 // Issuer is able to validate and sign certificates baed on a CSR.
 type Issuer interface {
 	Validate(csr *x509.CertificateRequest) error
 	Sign(csr *x509.CertificateRequest) ([]byte, error)
+	IssueToken(cert *x509.Certificate) ([]byte, error)
 	GetCACert() []byte
 }
 
@@ -24,16 +27,22 @@ type TriremeIssuer struct {
 	signingCert    *x509.Certificate
 	signingCertPEM []byte
 	signingKey     crypto.PrivateKey
+
+	tokenIssuer *pkiverifier.PKIConfiguration
 }
 
 // NewTriremeIssuer creates an issuer based on crypto CA objects
 // TODO: Remove the double reference to the SigningCert.
 func NewTriremeIssuer(signingCertPEM []byte, signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*TriremeIssuer, error) {
+	// TODO: Bettre validation of parameters here.
+	triremePKIConfig := pkiverifier.NewConfig(signingCert.PublicKey.(*ecdsa.PublicKey), signingKey.(*ecdsa.PrivateKey), time.Second)
 
 	return &TriremeIssuer{
 		signingCert:    signingCert,
 		signingCertPEM: signingCertPEM,
 		signingKey:     signingKey,
+
+		tokenIssuer: triremePKIConfig,
 	}, nil
 }
 
@@ -81,6 +90,11 @@ func (i *TriremeIssuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 	certificatePem := bytes.TrimSpace(clientCertificate)
 
 	return certificatePem, nil
+}
+
+// IssueToken generates a valid token for the cert given as parameter
+func (i *TriremeIssuer) IssueToken(cert *x509.Certificate) ([]byte, error) {
+	return i.tokenIssuer.CreateTokenFromCertificate(cert)
 }
 
 // GetCACert returns the CA Certificate that is used for this issuer.

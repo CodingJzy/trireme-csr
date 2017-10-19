@@ -27,7 +27,8 @@ type CertificateSpec struct {
 type CertificateStatus struct {
 	State       CertificateState `json:"state,omitempty"`
 	Certificate []byte           `json:"certificate,omitempty" protobuf:"bytes,2,opt,name=certificate"`
-	Ca          []byte           `json:"ca,omitempty" protobuf:"bytes,2,opt,name=certificate"`
+	Token       []byte           `json:"token,omitempty" protobuf:"bytes,2,opt,name=token"`
+	Ca          []byte           `json:"ca,omitempty" protobuf:"bytes,2,opt,name=ca"`
 }
 
 // CertificateState defines the state of the certificate

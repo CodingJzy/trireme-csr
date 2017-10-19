@@ -99,10 +99,23 @@ func (c *CertificateController) onAdd(obj interface{}) {
 	}
 	zap.L().Info("Cert successfully generated", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 
+	x509Cert, err := tglib.ReadCertificatePEMFromData(cert)
+	if err != nil {
+		zap.L().Error("Error loading x509 Cert", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+		return
+	}
+
+	token, err := c.issuer.IssueToken(x509Cert)
+	if err != nil {
+		zap.L().Error("Error Issuing compact PKI token", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+		return
+	}
+
 	zap.L().Debug("Cert successfully generated", zap.ByteString("cert", cert))
 
 	certRequest.Status.Certificate = cert
 	certRequest.Status.Ca = c.issuer.GetCACert()
+	certRequest.Status.Token = token
 	certRequest.Status.State = certificatev1alpha1.CertificateStateCreated
 
 	c.certificateClient.Certificates(certRequest.Namespace).Update(certRequest)
