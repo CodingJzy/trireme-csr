@@ -18,6 +18,7 @@ import (
 type Issuer interface {
 	Validate(csr *x509.CertificateRequest) error
 	Sign(csr *x509.CertificateRequest) ([]byte, error)
+	IssueToken(cert *x509.Certificate) ([]byte, error)
 	GetCACert() []byte
 }
 
