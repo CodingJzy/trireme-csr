@@ -32,6 +32,8 @@ type CertManager struct {
 	caCertPEM []byte
 	caCert    *x509.Certificate
 
+	smartToken []byte
+
 	certClient *certificateclient.CertificateClient
 }
 
@@ -105,7 +107,7 @@ func (m *CertManager) GetCertPEM() ([]byte, error) {
 	return m.certPEM, nil
 }
 
-// GetCaCert return the privateKey
+// GetCaCert returns the privateKey
 func (m *CertManager) GetCaCert() (*x509.Certificate, error) {
 	if m.caCert == nil {
 		return nil, fmt.Errorf("Cert is not received yet")
@@ -114,13 +116,22 @@ func (m *CertManager) GetCaCert() (*x509.Certificate, error) {
 	return m.caCert, nil
 }
 
-// GetCaCertPEM return the privateKey in PEM format
+// GetCaCertPEM returns the privateKey in PEM format
 func (m *CertManager) GetCaCertPEM() ([]byte, error) {
 	if m.caCertPEM == nil {
 		return nil, fmt.Errorf("Cert is not received yet")
 	}
 
 	return m.caCertPEM, nil
+}
+
+// GetSmartToken returns the GetSmartToken
+func (m *CertManager) GetSmartToken() ([]byte, error) {
+	if m.smartToken == nil {
+		return nil, fmt.Errorf("SmartToken is not received yet")
+	}
+
+	return m.smartToken, nil
 }
 
 // SendAndWaitforCert is a blocking func that issue the CertificateRequest and
@@ -182,6 +193,8 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 				if err != nil {
 					return fmt.Errorf("Couldn't parse CA certificate %s", err)
 				}
+
+				m.smartToken = cert.Status.Token
 
 				return nil
 			}
