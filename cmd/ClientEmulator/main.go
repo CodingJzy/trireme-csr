@@ -58,8 +58,14 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error Getting cert %s", err)
 	}
+	fmt.Printf("Received Cert: %+v ", cert)
 
-	fmt.Printf("Received certificate: %+v ", cert)
+	token, err := certManager.GetSmartToken()
+	if err != nil {
+		fmt.Printf("Error Getting token %s", err)
+	}
+
+	fmt.Printf("Received Token: %+v ", token)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)

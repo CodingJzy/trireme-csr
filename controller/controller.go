@@ -111,14 +111,18 @@ func (c *CertificateController) onAdd(obj interface{}) {
 		return
 	}
 
-	zap.L().Debug("Cert successfully generated", zap.ByteString("cert", cert))
+	zap.L().Debug("Cert and token successfully generated", zap.ByteString("cert", cert))
 
 	certRequest.Status.Certificate = cert
 	certRequest.Status.Ca = c.issuer.GetCACert()
 	certRequest.Status.Token = token
 	certRequest.Status.State = certificatev1alpha1.CertificateStateCreated
 
-	c.certificateClient.Certificates(certRequest.Namespace).Update(certRequest)
+	_, err = c.certificateClient.Certificates(certRequest.Namespace).Update(certRequest)
+	if err != nil {
+		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+		return
+	}
 }
 
 func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
