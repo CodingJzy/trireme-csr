@@ -69,13 +69,24 @@ func (i *TriremeIssuer) Validate(csr *x509.CertificateRequest) error {
 // Sign generate a signed and valid certificate for the CSR given as parameter
 func (i *TriremeIssuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 
+	var keyUsage x509.KeyUsage
+	var extKeyUsage []x509.ExtKeyUsage
+
+	// TODO: Revisit the exit KeyUsage.
+	keyUsage = x509.KeyUsageDigitalSignature
+	keyUsage |= x509.KeyUsageDigitalSignature
+	keyUsage |= x509.KeyUsageKeyEncipherment
+
+	extKeyUsage = append(extKeyUsage, x509.ExtKeyUsageClientAuth)
+	extKeyUsage = append(extKeyUsage, x509.ExtKeyUsageServerAuth)
+
 	pemCert, _, err := tglib.SignCSR(csr,
 		i.signingCert,
 		i.signingKey,
 		time.Now(),
 		time.Now().AddDate(1, 0, 0),
-		x509.KeyUsageDigitalSignature|x509.KeyUsageKeyEncipherment,
-		[]x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		keyUsage,
+		extKeyUsage,
 		x509.ECDSAWithSHA384,
 		x509.ECDSA,
 		false,
