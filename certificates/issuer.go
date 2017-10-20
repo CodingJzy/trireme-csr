@@ -72,9 +72,8 @@ func (i *TriremeIssuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 	var keyUsage x509.KeyUsage
 	var extKeyUsage []x509.ExtKeyUsage
 
-	// TODO: Revisit the exit KeyUsage.
+	// TODO: Revisit the existing KeyUsage.
 	keyUsage = x509.KeyUsageDigitalSignature
-	keyUsage |= x509.KeyUsageDigitalSignature
 	keyUsage |= x509.KeyUsageKeyEncipherment
 
 	extKeyUsage = append(extKeyUsage, x509.ExtKeyUsageClientAuth)
