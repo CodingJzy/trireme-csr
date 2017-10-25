@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CertificateResourcePlural is the ressource name used to get a list of cetts.
@@ -47,4 +48,34 @@ type CertificateList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata"`
 	Items           []Certificate `json:"items"`
+}
+
+// DeepCopyObject returns a copy of the object
+func (c *Certificate) DeepCopyObject() runtime.Object {
+	// TODO: Correct DeepCopy
+	return &Certificate{}
+}
+
+// DeepCopyObject returns a copy of the object
+func (c *CertificateList) DeepCopyObject() runtime.Object {
+	// TODO: Correct DeepCopy
+	return &CertificateList{}
+}
+
+// DeepCopyObject returns a copy of the object
+func (c *CertificateStatus) DeepCopyObject() *CertificateStatus {
+	// TODO: Correct DeepCopy
+	return &CertificateStatus{}
+}
+
+// DeepCopyObject returns a copy of the object
+func (c CertificateState) DeepCopyObject() CertificateState {
+	// TODO: Correct DeepCopy
+	return c
+}
+
+// DeepCopyObject returns a copy of the object
+func (c *CertificateSpec) DeepCopyObject() *CertificateSpec {
+	// TODO: Correct DeepCopy
+	return &CertificateSpec{}
 }
