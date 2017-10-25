@@ -11,12 +11,9 @@ import:
   - pkg/selection
   - pkg/watch
 - package: k8s.io/client-go
-  version: ^4.0.0
+  version: ^5.0.0
   subpackages:
   - kubernetes
-  - pkg/api
-  - pkg/api/v1
-  - pkg/apis/extensions/v1beta1
   - rest
   - tools/cache
   - tools/clientcmd
