@@ -35,14 +35,14 @@ type TriremeIssuer struct {
 // TODO: Remove the double reference to the SigningCert.
 func NewTriremeIssuer(signingCertPEM []byte, signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*TriremeIssuer, error) {
 	// TODO: Bettre validation of parameters here.
-	triremePKIConfig := pkiverifier.NewPKIIssuer(signingKey.(*ecdsa.PrivateKey))
+	pkiIssuer := pkiverifier.NewPKIIssuer(signingKey.(*ecdsa.PrivateKey))
 
 	return &TriremeIssuer{
 		signingCert:    signingCert,
 		signingCertPEM: signingCertPEM,
 		signingKey:     signingKey,
 
-		tokenIssuer: triremePKIConfig,
+		tokenIssuer: pkiIssuer,
 	}, nil
 }
 
