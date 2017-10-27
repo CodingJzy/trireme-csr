@@ -28,21 +28,21 @@ type TriremeIssuer struct {
 	signingCertPEM []byte
 	signingKey     crypto.PrivateKey
 
-	tokenIssuer *pkiverifier.PKIConfiguration
+	tokenIssuer pkiverifier.PKITokenIssuer
 }
 
 // NewTriremeIssuer creates an issuer based on crypto CA objects
 // TODO: Remove the double reference to the SigningCert.
 func NewTriremeIssuer(signingCertPEM []byte, signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*TriremeIssuer, error) {
 	// TODO: Bettre validation of parameters here.
-	triremePKIConfig := pkiverifier.NewConfig(signingCert.PublicKey.(*ecdsa.PublicKey), signingKey.(*ecdsa.PrivateKey), time.Second)
+	pkiIssuer := pkiverifier.NewPKIIssuer(signingKey.(*ecdsa.PrivateKey))
 
 	return &TriremeIssuer{
 		signingCert:    signingCert,
 		signingCertPEM: signingCertPEM,
 		signingKey:     signingKey,
 
-		tokenIssuer: triremePKIConfig,
+		tokenIssuer: pkiIssuer,
 	}, nil
 }
 
