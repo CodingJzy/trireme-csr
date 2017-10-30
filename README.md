@@ -85,6 +85,17 @@ The Controller creates and updates the `status` part of the definition with the 
 
 The definition of the certificates object can be found [here](./apis/v1alpha1/types.go)
 
-# Using Kubernetes API as a gate keeper
+# Using Kubernetes API as a gatekeeper
+
+In order to provide an identity Root of Trust, Trireme-CSR is leveraging Kubernetes API access control (Also known as ABAC//RBAC).
+The key concept is that only the cluster-admin should be able to create the root of trust (The `CA`).
+
+ABAC//RBAC is used in order to define two additional cluster roles that define granular permissions related to the `certificates`:
+* `trireme-cert-generator`: This is the permissions associated to the `Trireme-CSR` controller. It defines the right to create and update the `Certificate` object.
+* `trireme-enforcer-role`: As an example, those are the permissions generated for `Trireme-Kubernetes`. It includes the ability to create and get//list the `Certificate` object.
+
+In order to keep the whole scheme secure, all the pods on the cluster should run with the minimal required privileges. The role to create certificate should only be used if the pod is required to create a certificate.
 
 # Prerequisite
+
+* Kubernetes 1.7 (Custom Ressource Definitions are required)
