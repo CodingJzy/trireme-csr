@@ -28,25 +28,62 @@ wget https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/dep
 
 # Deploying the Trireme-CSR controller
 
-The controller is deployed as a standard Kubernetes pod. It expect the CACert and CAKey to be mounted (By default it will be mounted from the existing secret).
+The controller is deployed as a standard Kubernetes pod. It expects the CACert and CAKey to be mounted (By default it will be mounted from the existing secret).
 It also requires the Certificate Custom Ressource definition to be already created.
 
 All of this can be done by deploying the following files:
 
-* Config Map used for all the configuration:
-https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme/trireme-cm.yaml
+* Config Map used for all the configuration. Ideally it should be reviewed before being deployed:
+```
+kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme/trireme-cm.yaml
+```
 * Certificate Custom Ressource Definition:
-https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme/cert-crd.yaml
+```
+kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme/cert-crd.yaml
+```
 * ServiceAccount and roles used for access to the Certificates:
-https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme/certgen-serviceaccount.yaml
+```
+kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme/certgen-serviceaccount.yaml
+```
 * Trireme-CSR Controller as a ReplicaSet:
-https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme/certgen-rs.yaml
+```
+kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme/certgen-rs.yaml
+```
 
-# using the Trireme-CSR Client.
+# Requesting an identity//certificate
 
+In order for a client to request an identity to the controller source of truth, a new object needs to be created as `Certificate` with a `Certificate Signing Request` enclosed in the object `Spec`. See details about the object specification in the CRD section
+.
 
+This process can be done manually or automated by using the `Trireme-CSR` client library.
+The client library first generates a Keypair and stores it in-memory. A corresponding certificate is then generated and a `Certificate` object is created on Kubernetes API. The library then blocks and waits for the Controller to fulfill the request and generate and send the certificate back.
+
+An example implementation using the Trireme-CSR client library can be found in the example directory
 
 # Certificate Custom Resource Definition
+
+A new object type is defined on Kubernetes API (using a `Custom Ressource Definition`) that contains the `Certificate Signing Request` as part of the request and the validated and signed certificate as part of the response (status).
+
+This new object is defined as following:
+
+```
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: node1
+spec:
+  request: [CSR PEM]
+status:
+  ca: [CA PEM]
+  certificate: [CERT PEM] 
+  token: [Smart Token]
+  state: created
+```
+
+The `spec` is filled in by the client at object creation time with the `CSR`.
+The Controller creates and updates the `status` part of the definition with the `CA`, `Certificate`, SmartToken (More on this later), and state of the certificate (`created`, `rejected`, `processing`)
+
+The definition of the certificates object can be found [here](./apis/v1alpha1/types.go)
 
 # Using Kubernetes API as a gate keeper
 
