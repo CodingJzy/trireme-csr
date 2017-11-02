@@ -67,6 +67,12 @@ func (c *CertificateController) watchCerts() (cache.Controller, error) {
 func (c *CertificateController) onAdd(obj interface{}) {
 	zap.L().Debug("Adding Cert event")
 	certRequest := obj.(*certificatev1alpha1.Certificate)
+
+	if certRequest.Status.State == certificatev1alpha1.CertificateStateCreated || certRequest.Status.State == certificatev1alpha1.CertificateStateProcessed != nil {
+		zap.L().Debug("Added Cert request has already been processed", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
+		return
+	}
+
 	csrs, err := tglib.LoadCSRs(certRequest.Spec.Request)
 	if err != nil {
 		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
@@ -126,7 +132,7 @@ func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
 	certRequest := newObj.(*certificatev1alpha1.Certificate)
 
 	// Checking if the Status is already a generated Cert:
-	if certRequest.Status.Certificate != nil {
+	if certRequest.Status.State == certificatev1alpha1.CertificateStateCreated || certRequest.Status.State == certificatev1alpha1.CertificateStateProcessed != nil {
 		zap.L().Debug("Updated Cert request has already been processed", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 		return
 	}
