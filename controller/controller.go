@@ -21,10 +21,6 @@ type CertificateController struct {
 	issuer            certificates.Issuer
 }
 
-var certPath = "/Users/bvandewa/golang/src/github.com/aporeto-inc/trireme-csr/testdata/private/ca.cert.pem"
-var certKeyPath = "/Users/bvandewa/golang/src/github.com/aporeto-inc/trireme-csr/testdata/private/ca.key.pem"
-var certPass = "test"
-
 // NewCertificateController generates the new CertificateController
 func NewCertificateController(certificateClient *certificateclient.CertificateClient, issuer certificates.Issuer) (*CertificateController, error) {
 
