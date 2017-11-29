@@ -68,7 +68,7 @@ func (c *CertificateController) onAdd(obj interface{}) {
 	zap.L().Debug("Adding Cert event")
 	certRequest := obj.(*certificatev1alpha1.Certificate)
 
-	if certRequest.Status.State == certificatev1alpha1.CertificateStateCreated || certRequest.Status.State == certificatev1alpha1.CertificateStateProcessed != nil {
+	if certRequest.Status.State == certificatev1alpha1.CertificateStateCreated || certRequest.Status.State == certificatev1alpha1.CertificateStateProcessed {
 		zap.L().Debug("Added Cert request has already been processed", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 		return
 	}
@@ -132,7 +132,7 @@ func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
 	certRequest := newObj.(*certificatev1alpha1.Certificate)
 
 	// Checking if the Status is already a generated Cert:
-	if certRequest.Status.State == certificatev1alpha1.CertificateStateCreated || certRequest.Status.State == certificatev1alpha1.CertificateStateProcessed != nil {
+	if certRequest.Status.State == certificatev1alpha1.CertificateStateCreated || certRequest.Status.State == certificatev1alpha1.CertificateStateProcessed {
 		zap.L().Debug("Updated Cert request has already been processed", zap.String("namespace", certRequest.Namespace), zap.String("name", certRequest.Name))
 		return
 	}

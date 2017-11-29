@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/aporeto-inc/tg/tglib"
-	"github.com/aporeto-inc/trireme/enforcer/utils/pkiverifier"
+	"github.com/aporeto-inc/trireme-lib/enforcer/utils/pkiverifier"
 )
 
 // Issuer is able to validate and sign certificates baed on a CSR.
