@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 
-	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
+	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/apis/v1alpha2"
 )
 
 // CertificateClient represents a client for the CRD for certs.
@@ -16,12 +16,12 @@ type CertificateClient struct {
 // NewClient generates a client for the certificate type.
 func NewClient(cfg *rest.Config) (*CertificateClient, *runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
-	if err := certificatev1alpha1.AddToScheme(scheme); err != nil {
+	if err := certificatev1alpha2.AddToScheme(scheme); err != nil {
 		return nil, nil, err
 	}
 
 	config := *cfg
-	config.GroupVersion = &certificatev1alpha1.SchemeGroupVersion
+	config.GroupVersion = &certificatev1alpha2.SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.ContentType = runtime.ContentTypeJSON
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)}
@@ -39,8 +39,8 @@ func NewClient(cfg *rest.Config) (*CertificateClient, *runtime.Scheme, error) {
 }
 
 // Certificates generates an object to communicate with certificates
-func (c *CertificateClient) Certificates(namespace string) CertificateInterface {
-	return newCertificates(c, namespace)
+func (c *CertificateClient) Certificates() CertificateInterface {
+	return newCertificates(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate
