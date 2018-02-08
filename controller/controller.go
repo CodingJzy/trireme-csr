@@ -72,22 +72,25 @@ func (c *CertificateController) onAdd(obj interface{}) {
 		return
 	}
 
-	// if a new object is added which already has the signed or rejected phase, we don't need to take any actions
-	// TODO: if a cert is added as signed, we should validate it before we allow this
-	if certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseSigned || certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseRejected {
-		zap.L().Debug("Added Cert request has already been processed", zap.String("name", certRequest.Name))
-		return
-	}
+	switch certRequest.Status.Phase {
+	case certificatev1alpha2.CertificateSigned:
+		zap.L().Debug("Added Cert request has already been processed and a certificate was issued", zap.String("name", certRequest.Name))
+		// TODO: if a cert is added as signed, we should validate it before we allow this
 
-	// if a new object is added with phase "submitted", it means that we want to submit it for signing
-	if certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseSubmitted {
+	case certificatev1alpha2.CertificateRejected:
+		zap.L().Debug("Added Cert request has already been processed and was rejected", zap.String("name", certRequest.Name))
+	case certificatev1alpha2.CertificateSubmitted:
 		zap.L().Info("Processing Cert request")
+		// we definitely want to process this request when the object has been created with the Submitted Phase
 		c.processCert(certRequest)
-		return
+	case certificatev1alpha2.CertificateUnknown:
+		// nothing has to be done when we are in the 'Unknown' phase
+		zap.L().Debug("Nothing has to be done for this Cert request")
+	default:
+		// this means that a phase is missing, so we move it to the Unknown phase
+		// the user will have to decide to move this into the Submitted phase
+		c.updateCertUnknown(certRequest)
 	}
-
-	// otherwise nothing has to be done
-	zap.L().Debug("Nothing has to be done for this Cert request")
 }
 
 func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
@@ -98,21 +101,21 @@ func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	// Checking if the Status is already a generated Cert:
-	if certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseSigned || certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseRejected {
-		zap.L().Debug("Updated Cert request has already been processed", zap.String("name", certRequest.Name))
-		return
-	}
-
-	if certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseSubmitted {
+	switch certRequest.Status.Phase {
+	case certificatev1alpha2.CertificateSigned:
+		zap.L().Debug("Updated Cert request has been processed and a certificate was issued", zap.String("name", certRequest.Name))
+	case certificatev1alpha2.CertificateRejected:
+		zap.L().Debug("Update Cert request has been processed and was rejected", zap.String("name", certRequest.Name))
+	case certificatev1alpha2.CertificateUnknown:
+		zap.L().Debug("Nothing has to be done for this Cert request")
+	case certificatev1alpha2.CertificateSubmitted:
 		zap.L().Info("Processing Cert request")
+		// TODO: maybe we should rethink if we want to allow to resubmit a CSR?
 		c.processCert(certRequest)
-		return
+	default:
+		// this means that a phase is missing, so we move it to the Unknown phase
+		c.updateCertUnknown(certRequest)
 	}
-
-	// otherwise nothing has to be done
-	zap.L().Info("Cert Request updated still has to be generated", zap.String("name", certRequest.Name))
-
 }
 
 func (c *CertificateController) onDelete(obj interface{}) {
@@ -135,7 +138,7 @@ func (c *CertificateController) processCert(certRequest *certificatev1alpha2.Cer
 
 	zap.L().Info("Validating cert request", zap.String("name", certRequest.Name))
 
-	err = c.issuer.Validate(csr)
+	err = c.issuer.ValidateRequest(csr)
 	if err != nil {
 		zap.L().Error("CSR has not been validated", zap.Error(err), zap.String("name", certRequest.Name))
 		return
@@ -163,12 +166,44 @@ func (c *CertificateController) processCert(certRequest *certificatev1alpha2.Cer
 
 	zap.L().Debug("Cert and token successfully generated", zap.ByteString("cert", cert))
 
+	// last but not least, update our object with the signed cert
+	c.updateCertSigned(certRequest, cert, token)
+}
+
+func (c *CertificateController) updateCertUnknown(certRequest *certificatev1alpha2.Certificate) {
+	certRequest.Status.Phase = certificatev1alpha2.CertificateUnknown
+	certRequest.Status.Reason = certificatev1alpha2.StatusReasonUnprocessed
+	certRequest.Status.Message = "The request has not been processed by the controller yet. Submit this CSR by putting it into the 'Submitted' phase."
+
+	_, err := c.certificateClient.Certificates().Update(certRequest)
+	if err != nil {
+		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
+		return
+	}
+}
+
+func (c *CertificateController) updateCertRejected(certRequest *certificatev1alpha2.Certificate, rejectErr error) {
+	certRequest.Status.Phase = certificatev1alpha2.CertificateRejected
+	certRequest.Status.Reason = certificatev1alpha2.StatusReasonProcessedRejected
+	certRequest.Status.Message = rejectErr.Error()
+
+	_, err := c.certificateClient.Certificates().Update(certRequest)
+	if err != nil {
+		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
+		return
+	}
+}
+
+// updateCertSigned is called when a request has been successfully processed/approved/signed
+func (c *CertificateController) updateCertSigned(certRequest *certificatev1alpha2.Certificate, cert, token []byte) {
 	certRequest.Status.Certificate = cert
 	certRequest.Status.Ca = c.issuer.GetCACert()
 	certRequest.Status.Token = token
-	certRequest.Status.Phase = certificatev1alpha2.CertificatePhaseSigned
+	certRequest.Status.Phase = certificatev1alpha2.CertificateSigned
+	certRequest.Status.Reason = certificatev1alpha2.StatusReasonProcessedApprovedSignedIssued
+	certRequest.Status.Message = "CSR has been processed and approved, and the Certificate has been signed and issued"
 
-	_, err = c.certificateClient.Certificates().Update(certRequest)
+	_, err := c.certificateClient.Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
