@@ -76,7 +76,6 @@ func (c *CertificateController) onAdd(obj interface{}) {
 	case certificatev1alpha2.CertificateSigned:
 		zap.L().Debug("Added Cert request has already been processed and a certificate was issued", zap.String("name", certRequest.Name))
 		// TODO: if a cert is added as signed, we should validate it before we allow this
-
 	case certificatev1alpha2.CertificateRejected:
 		zap.L().Debug("Added Cert request has already been processed and was rejected", zap.String("name", certRequest.Name))
 	case certificatev1alpha2.CertificateSubmitted:
