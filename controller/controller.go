@@ -66,13 +66,61 @@ func (c *CertificateController) watchCerts() (cache.Controller, error) {
 
 func (c *CertificateController) onAdd(obj interface{}) {
 	zap.L().Debug("Adding Cert event")
-	certRequest := obj.(*certificatev1alpha2.Certificate)
+	certRequest, ok := obj.(*certificatev1alpha2.Certificate)
+	if !ok {
+		zap.L().Sugar().Errorf("Received wrong object type in adding Cert event: '%T", obj)
+		return
+	}
 
-	if certRequest.Status.State == certificatev1alpha2.CertificateStateCreated || certRequest.Status.State == certificatev1alpha2.CertificateStateProcessed {
+	// if a new object is added which already has the signed or rejected phase, we don't need to take any actions
+	// TODO: if a cert is added as signed, we should validate it before we allow this
+	if certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseSigned || certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseRejected {
 		zap.L().Debug("Added Cert request has already been processed", zap.String("name", certRequest.Name))
 		return
 	}
 
+	// if a new object is added with phase "submitted", it means that we want to submit it for signing
+	if certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseSubmitted {
+		zap.L().Info("Processing Cert request")
+		c.processCert(certRequest)
+		return
+	}
+
+	// otherwise nothing has to be done
+	zap.L().Debug("Nothing has to be done for this Cert request")
+}
+
+func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
+	zap.L().Debug("Updating Cert event")
+	certRequest, ok := newObj.(*certificatev1alpha2.Certificate)
+	if !ok {
+		zap.L().Sugar().Errorf("Received wrong object type in updating Cert event: '%T", newObj)
+		return
+	}
+
+	// Checking if the Status is already a generated Cert:
+	if certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseSigned || certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseRejected {
+		zap.L().Debug("Updated Cert request has already been processed", zap.String("name", certRequest.Name))
+		return
+	}
+
+	if certRequest.Status.Phase == certificatev1alpha2.CertificatePhaseSubmitted {
+		zap.L().Info("Processing Cert request")
+		c.processCert(certRequest)
+		return
+	}
+
+	// otherwise nothing has to be done
+	zap.L().Info("Cert Request updated still has to be generated", zap.String("name", certRequest.Name))
+
+}
+
+func (c *CertificateController) onDelete(obj interface{}) {
+	zap.L().Debug("Deleting Cert event")
+}
+
+// processCert is called from `onUpdate` or `onAdd` to sign/reject a CSR
+func (c *CertificateController) processCert(certRequest *certificatev1alpha2.Certificate) {
 	csrs, err := tglib.LoadCSRs(certRequest.Spec.Request)
 	if err != nil {
 		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("name", certRequest.Name))
@@ -96,7 +144,7 @@ func (c *CertificateController) onAdd(obj interface{}) {
 
 	cert, err := c.issuer.Sign(csr)
 	if err != nil {
-		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("name", certRequest.Name))
+		zap.L().Error("Error signing CSR", zap.Error(err), zap.String("name", certRequest.Name))
 		return
 	}
 	zap.L().Info("Cert successfully generated", zap.String("name", certRequest.Name))
@@ -118,29 +166,11 @@ func (c *CertificateController) onAdd(obj interface{}) {
 	certRequest.Status.Certificate = cert
 	certRequest.Status.Ca = c.issuer.GetCACert()
 	certRequest.Status.Token = token
-	certRequest.Status.State = certificatev1alpha2.CertificateStateCreated
+	certRequest.Status.Phase = certificatev1alpha2.CertificatePhaseSigned
 
 	_, err = c.certificateClient.Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
 	}
-}
-
-func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
-	zap.L().Debug("UpdatingCert")
-	certRequest := newObj.(*certificatev1alpha2.Certificate)
-
-	// Checking if the Status is already a generated Cert:
-	if certRequest.Status.State == certificatev1alpha2.CertificateStateCreated || certRequest.Status.State == certificatev1alpha2.CertificateStateProcessed {
-		zap.L().Debug("Updated Cert request has already been processed", zap.String("name", certRequest.Name))
-		return
-	}
-
-	zap.L().Info("Cert Request updated still has to be generated", zap.String("name", certRequest.Name))
-
-}
-
-func (c *CertificateController) onDelete(obj interface{}) {
-	zap.L().Debug("DeletingCert")
 }
