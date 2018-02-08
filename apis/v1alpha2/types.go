@@ -12,10 +12,10 @@ const CertificateResourcePlural = "certificates"
 type Certificate struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
-	metav1.ObjectMeta `json:"metadata"`
-	Spec              CertificateSpec `json:"spec"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Spec              CertificateSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// +optional
-	Status CertificateStatus `json:"status,omitempty"`
+	Status CertificateStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // CertificateSpec is the specification for Certificates on the API
@@ -26,20 +26,26 @@ type CertificateSpec struct {
 
 // CertificateStatus is the status for Certificates on the API
 type CertificateStatus struct {
-	State       CertificateState `json:"state,omitempty"`
-	Certificate []byte           `json:"certificate,omitempty" protobuf:"bytes,2,opt,name=certificate"`
-	Token       []byte           `json:"token,omitempty" protobuf:"bytes,2,opt,name=token"`
-	Ca          []byte           `json:"ca,omitempty" protobuf:"bytes,2,opt,name=ca"`
+	Phase       CertificatePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase,casttype=CertificatePhase"`
+	Message     string           `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
+	Reason      string           `json:"reason,omitempty" protobuf:"bytes,4,opt,name=reason"`
+	Certificate []byte           `json:"certificate,omitempty" protobuf:"bytes,4,opt,name=certificate"`
+	Token       []byte           `json:"token,omitempty" protobuf:"bytes,5,opt,name=token"`
+	Ca          []byte           `json:"ca,omitempty" protobuf:"bytes,6,opt,name=ca"`
 }
 
-// CertificateState defines the state of the certificate
-type CertificateState string
+// CertificatePhase defines the phase of the certificate
+type CertificatePhase string
 
 const (
-	// CertificateStateCreated defines that the Certificate was created
-	CertificateStateCreated CertificateState = "Created"
-	// CertificateStateProcessed defines that the certificate was processed
-	CertificateStateProcessed CertificateState = "Processed"
+	// CertificatePhaseSubmitted defines that the CSR was submitted
+	CertificatePhaseSubmitted CertificatePhase = "Submitted"
+	// CertificatePhaseSigned defines that the CSR was processed, and the request has been approved and the certificate was signed and has been issued
+	CertificatePhaseSigned CertificatePhase = "Signed"
+	// CertificatePhaseRejected defines that the CSR was processed, and the request has been rejected and therefore no certificate was issued
+	CertificatePhaseRejected CertificatePhase = "Rejected"
+	// CertificatePhaseUnknown defines that the CSR is in an unknown state, and the controller will not take any further action on this object
+	CertificatePhaseUnknown CertificatePhase = "Unknown"
 )
 
 // CertificateList represents a list of certificate
@@ -69,7 +75,7 @@ func (c *CertificateStatus) DeepCopyObject() *CertificateStatus {
 }
 
 // DeepCopyObject returns a copy of the object
-func (c CertificateState) DeepCopyObject() CertificateState {
+func (c CertificatePhase) DeepCopyObject() CertificatePhase {
 	// TODO: Correct DeepCopy
 	return c
 }
