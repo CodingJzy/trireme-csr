@@ -38,14 +38,21 @@ type CertificateStatus struct {
 type CertificatePhase string
 
 const (
-	// CertificatePhaseSubmitted defines that the CSR was submitted
-	CertificatePhaseSubmitted CertificatePhase = "Submitted"
-	// CertificatePhaseSigned defines that the CSR was processed, and the request has been approved and the certificate was signed and has been issued
-	CertificatePhaseSigned CertificatePhase = "Signed"
-	// CertificatePhaseRejected defines that the CSR was processed, and the request has been rejected and therefore no certificate was issued
-	CertificatePhaseRejected CertificatePhase = "Rejected"
-	// CertificatePhaseUnknown defines that the CSR is in an unknown state, and the controller will not take any further action on this object
-	CertificatePhaseUnknown CertificatePhase = "Unknown"
+	// CertificateSubmitted defines that the CSR was submitted
+	CertificateSubmitted CertificatePhase = "Submitted"
+	// CertificateSigned defines that the CSR was processed, and the request has been approved and the certificate was signed and has been issued
+	CertificateSigned CertificatePhase = "Signed"
+	// CertificateRejected defines that the CSR was processed, and the request has been rejected and therefore no certificate was issued
+	CertificateRejected CertificatePhase = "Rejected"
+	// CertificateUnknown defines that the CSR is in an unknown state, and the controller will not take any further action on this object
+	CertificateUnknown CertificatePhase = "Unknown"
+)
+
+// Certificate Status reasons
+const (
+	StatusReasonUnprocessed                   = "Unprocessed"
+	StatusReasonProcessedApprovedSignedIssued = "ProcessedApprovedSignedIssued"
+	StatusReasonProcessedRejected             = "ProcessedRejected"
 )
 
 // CertificateList represents a list of certificate
