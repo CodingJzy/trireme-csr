@@ -14,7 +14,7 @@ import (
 	"github.com/aporeto-inc/trireme-lib/enforcer/utils/pkiverifier"
 )
 
-// Issuer is able to validate and sign certificates baed on a CSR.
+// Issuer is able to validate and sign certificates based on a CSR.
 type Issuer interface {
 	ValidateRequest(csr *x509.CertificateRequest) error
 	ValidateCert(cert *x509.Certificate) error
@@ -35,7 +35,7 @@ type TriremeIssuer struct {
 // NewTriremeIssuer creates an issuer based on crypto CA objects
 // TODO: Remove the double reference to the SigningCert.
 func NewTriremeIssuer(signingCertPEM []byte, signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*TriremeIssuer, error) {
-	// TODO: Bettre validation of parameters here.
+	// TODO: Better validation of parameters here.
 	pkiIssuer := pkiverifier.NewPKIIssuer(signingKey.(*ecdsa.PrivateKey))
 	caCertPool := x509.NewCertPool()
 	caCertPool.AddCert(signingCert)
