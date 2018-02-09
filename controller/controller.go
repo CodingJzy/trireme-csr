@@ -80,28 +80,50 @@ func (c *CertificateController) onAdd(obj interface{}) {
 		// 1. check if the CSR was actually valid
 		csr, err := certRequest.GetCertificateRequest()
 		if err != nil {
-			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to get CSR: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			c.updateCertRejected(
+				certRequest,
+				certificatev1alpha2.StatusReasonProcessedRejectedInvalidCSR,
+				fmt.Errorf("changing phase to '%s': failed to get CSR: %s", certificatev1alpha2.CertificateRejected, err.Error()),
+			)
 			return
 		}
 		err = c.issuer.ValidateRequest(csr)
 		if err != nil {
-			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to validate CSR: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			c.updateCertRejected(
+				certRequest,
+				certificatev1alpha2.StatusReasonProcessedRejectedInvalidCSR,
+				fmt.Errorf("changing phase to '%s': failed to validate CSR: %s", certificatev1alpha2.CertificateRejected, err.Error()),
+			)
 			return
 		}
 		// 2. check if the issued cert is valid
 		cert, err := certRequest.GetCertificate()
 		if err != nil {
-			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to get Certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			c.updateCertRejected(
+				certRequest,
+				certificatev1alpha2.StatusReasonProcessedRejectedInvalidCerts,
+				fmt.Errorf("changing phase to '%s': failed to get Certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()),
+			)
 			return
 		}
+		// as this has been added as a new object, we retrieve the CA from the object here for validation,
+		// as chances are that the CA cert is not the cert of the running CA
 		ca, err := certRequest.GetCACertificate()
 		if err != nil {
-			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to get CA Certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			c.updateCertRejected(
+				certRequest,
+				certificatev1alpha2.StatusReasonProcessedRejectedInvalidCerts,
+				fmt.Errorf("changing phase to '%s': failed to get CA Certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()),
+			)
 			return
 		}
 		err = c.issuer.ValidateCert(cert, ca)
 		if err != nil {
-			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to validate signed certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			c.updateCertRejected(
+				certRequest,
+				certificatev1alpha2.StatusReasonProcessedRejectedInvalidCerts,
+				fmt.Errorf("changing phase to '%s': failed to validate signed certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()),
+			)
 		}
 		// it is a valid object, nothing more to be done
 
@@ -111,7 +133,7 @@ func (c *CertificateController) onAdd(obj interface{}) {
 	case certificatev1alpha2.CertificateSubmitted:
 		zap.L().Info("Processing Cert request")
 		// we definitely want to process this request when the object has been created with the Submitted Phase
-		c.processCert(certRequest)
+		c.process(certRequest)
 
 	case certificatev1alpha2.CertificateUnknown:
 		// nothing has to be done when we are in the 'Unknown' phase at Adding time
@@ -147,7 +169,26 @@ func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
 	switch certRequest.Status.Phase {
 	case certificatev1alpha2.CertificateSigned:
 		zap.L().Debug("Updated Cert request has been processed and a certificate was issued", zap.String("name", certRequest.Name))
-		// Signed is a final state in the update phase, nothing more has to be done
+		// Signed is a final state in the update phase
+		// the only thing that we will do is to validate the certs again, to ensure that this is not a rogue update
+		cert, err := certRequest.GetCertificate()
+		if err != nil {
+			c.updateCertRejected(
+				certRequest,
+				certificatev1alpha2.StatusReasonProcessedRejectedInvalidCerts,
+				fmt.Errorf("changing phase to '%s': failed to get Certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()),
+			)
+			return
+		}
+		err = c.issuer.ValidateCert(cert, nil)
+		if err != nil {
+			c.updateCertRejected(
+				certRequest,
+				certificatev1alpha2.StatusReasonProcessedRejectedInvalidCerts,
+				fmt.Errorf("changing phase to '%s': failed to validate signed certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()),
+			)
+		}
+		// it is a valid object, nothing more to be done
 
 	case certificatev1alpha2.CertificateRejected:
 		zap.L().Debug("Update Cert request has been processed and was rejected", zap.String("name", certRequest.Name))
@@ -165,7 +206,7 @@ func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
 
 	case certificatev1alpha2.CertificateSubmitted:
 		zap.L().Info("Processing Cert request")
-		c.processCert(certRequest)
+		c.process(certRequest)
 
 	default:
 		// this means that a phase is missing, so we move it to the Unknown phase
@@ -178,45 +219,68 @@ func (c *CertificateController) onDelete(obj interface{}) {
 	zap.L().Debug("Deleting Cert event")
 }
 
-// processCert is called from `onUpdate` or `onAdd` to sign/reject a CSR
-func (c *CertificateController) processCert(certRequest *certificatev1alpha2.Certificate) {
-	csrs, err := tglib.LoadCSRs(certRequest.Spec.Request)
+// process is called from a `Submitted` phase event from `onUpdate` or `onAdd` to process the request
+func (c *CertificateController) process(certRequest *certificatev1alpha2.Certificate) {
+	// Load CSR
+	csr, err := certRequest.GetCertificateRequest()
 	if err != nil {
 		zap.L().Error("Error loading CSR", zap.Error(err), zap.String("name", certRequest.Name))
-		return
-	}
-	if len(csrs) > 1 {
-		zap.L().Error("Error loading CSR: 0 or more than 1 CSRs attached", zap.Error(err), zap.String("name", certRequest.Name), zap.Int("CSRAmount", len(csrs)))
+		c.updateCertRejected(
+			certRequest,
+			certificatev1alpha2.StatusReasonProcessedRejectedInvalidCSR,
+			fmt.Errorf("Error loading CSR: %s", err.Error()),
+		)
 		return
 	}
 
-	csr := csrs[0]
-
+	// Validate CSR
 	zap.L().Info("Validating cert request", zap.String("name", certRequest.Name))
-
 	err = c.issuer.ValidateRequest(csr)
 	if err != nil {
 		zap.L().Error("CSR has not been validated", zap.Error(err), zap.String("name", certRequest.Name))
+		c.updateCertRejected(
+			certRequest,
+			certificatev1alpha2.StatusReasonProcessedRejectedInvalidCSR,
+			fmt.Errorf("Failed to validate CSR: %s", err.Error()),
+		)
 		return
 	}
 	zap.L().Info("Cert request has been accepted", zap.String("name", certRequest.Name))
 
+	// Sign CSR
 	cert, err := c.issuer.Sign(csr)
 	if err != nil {
 		zap.L().Error("Error signing CSR", zap.Error(err), zap.String("name", certRequest.Name))
+		c.updateCertRejected(
+			certRequest,
+			certificatev1alpha2.StatusReasonProcessedRejected,
+			fmt.Errorf("Failed to sign CSR: %s", err.Error()),
+		)
 		return
 	}
 	zap.L().Info("Cert successfully generated", zap.String("name", certRequest.Name))
 
+	// Load the certificate as x509.Certificate as well, so that we can issue the token
 	x509Cert, err := tglib.ReadCertificatePEMFromData(cert)
 	if err != nil {
 		zap.L().Error("Error loading x509 Cert", zap.Error(err), zap.String("name", certRequest.Name))
+		c.updateCertRejected(
+			certRequest,
+			certificatev1alpha2.StatusReasonProcessedRejected,
+			fmt.Errorf("Error loading x509 Cert: %s", err.Error()),
+		)
 		return
 	}
 
+	// issue token
 	token, err := c.issuer.IssueToken(x509Cert)
 	if err != nil {
 		zap.L().Error("Error Issuing compact PKI token", zap.Error(err), zap.String("name", certRequest.Name))
+		c.updateCertRejected(
+			certRequest,
+			certificatev1alpha2.StatusReasonProcessedRejected,
+			fmt.Errorf("Error Issuing compact PKI token: %s", err.Error()),
+		)
 		return
 	}
 
@@ -250,9 +314,9 @@ func (c *CertificateController) updateCertUnknown(certRequest *certificatev1alph
 	}
 }
 
-func (c *CertificateController) updateCertRejected(certRequest *certificatev1alpha2.Certificate, rejectErr error) {
+func (c *CertificateController) updateCertRejected(certRequest *certificatev1alpha2.Certificate, reason string, rejectErr error) {
 	certRequest.Status.Phase = certificatev1alpha2.CertificateRejected
-	certRequest.Status.Reason = certificatev1alpha2.StatusReasonProcessedRejected
+	certRequest.Status.Reason = reason
 	certRequest.Status.Message = rejectErr.Error()
 
 	_, err := c.certificateClient.Certificates().Update(certRequest)

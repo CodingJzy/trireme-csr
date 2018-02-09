@@ -59,6 +59,7 @@ const (
 	StatusReasonProcessedApprovedSignedIssued = "ProcessedApprovedSignedIssued"
 	StatusReasonProcessedRejected             = "ProcessedRejected"
 	StatusReasonProcessedRejectedInvalidCSR   = "ProcessedRejectedInvalidCSR"
+	StatusReasonProcessedRejectedInvalidCerts = "ProcessedRejectedInvalidCerts"
 )
 
 // CertificateList represents a list of certificate
