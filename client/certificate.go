@@ -12,7 +12,7 @@ import (
 type CertificateInterface interface {
 	Create(*certificatev1alpha2.Certificate) (*certificatev1alpha2.Certificate, error)
 	Update(*certificatev1alpha2.Certificate) (*certificatev1alpha2.Certificate, error)
-	//UpdateStatus(*certificatev1alpha2.Certificate) (*certificatev1alpha2.Certificate, error)
+	UpdateStatus(*certificatev1alpha2.Certificate) (*certificatev1alpha2.Certificate, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	//DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*certificatev1alpha2.Certificate, error)
@@ -49,6 +49,19 @@ func (c *certificates) Update(certificate *certificatev1alpha2.Certificate) (res
 	err = c.client.Put().
 		Resource("certificates").
 		Name(certificate.Name).
+		Body(certificate).
+		Do().
+		Into(result)
+	return
+}
+
+// Update takes the representation of a certificate and updates it. Returns the server's representation of the certificate, and an error, if there is any.
+func (c *certificates) UpdateStatus(certificate *certificatev1alpha2.Certificate) (result *certificatev1alpha2.Certificate, err error) {
+	result = &certificatev1alpha2.Certificate{}
+	err = c.client.Put().
+		Resource("certificates").
+		Name(certificate.Name).
+		SubResource("status").
 		Body(certificate).
 		Do().
 		Into(result)

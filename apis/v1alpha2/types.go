@@ -31,8 +31,8 @@ type CertificateSpec struct {
 // CertificateStatus is the status for Certificates on the API
 type CertificateStatus struct {
 	Phase       CertificatePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase,casttype=CertificatePhase"`
-	Message     string           `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
-	Reason      string           `json:"reason,omitempty" protobuf:"bytes,4,opt,name=reason"`
+	Message     string           `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
+	Reason      string           `json:"reason,omitempty" protobuf:"bytes,3,opt,name=reason"`
 	Certificate []byte           `json:"certificate,omitempty" protobuf:"bytes,4,opt,name=certificate"`
 	Token       []byte           `json:"token,omitempty" protobuf:"bytes,5,opt,name=token"`
 	Ca          []byte           `json:"ca,omitempty" protobuf:"bytes,6,opt,name=ca"`
@@ -66,8 +66,8 @@ const (
 type CertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
-	metav1.ListMeta `json:"metadata"`
-	Items           []Certificate `json:"items"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Items           []Certificate `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // DeepCopyObject returns a copy of the object
