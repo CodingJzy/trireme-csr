@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"crypto/x509"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -246,6 +247,17 @@ func (c *CertificateController) process(certRequest *certificatev1alpha2.Certifi
 		return
 	}
 	zap.L().Info("Cert request has been accepted", zap.String("name", certRequest.Name))
+
+	// Check Key type: currently it *must* be an ECDSA key
+	if csr.PublicKeyAlgorithm != x509.ECDSA {
+		zap.L().Error("CSR is generated from an unsupported key type", zap.String("name", certRequest.Name))
+		c.updateCertRejected(
+			certRequest,
+			certificatev1alpha2.StatusReasonProcessedRejectedInvalidCSR,
+			fmt.Errorf("Unsupported Key Type (only ECDSA keys are supported)"),
+		)
+		return
+	}
 
 	// Sign CSR
 	cert, err := c.issuer.Sign(csr)
