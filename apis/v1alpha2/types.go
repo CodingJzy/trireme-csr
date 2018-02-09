@@ -55,8 +55,10 @@ const (
 // Certificate Status reasons
 const (
 	StatusReasonUnprocessed                   = "Unprocessed"
+	StatusReasonSubmitted                     = "Submitted"
 	StatusReasonProcessedApprovedSignedIssued = "ProcessedApprovedSignedIssued"
 	StatusReasonProcessedRejected             = "ProcessedRejected"
+	StatusReasonProcessedRejectedInvalidCSR   = "ProcessedRejectedInvalidCSR"
 )
 
 // CertificateList represents a list of certificate

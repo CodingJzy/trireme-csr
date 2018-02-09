@@ -17,7 +17,7 @@ import (
 // Issuer is able to validate and sign certificates based on a CSR.
 type Issuer interface {
 	ValidateRequest(csr *x509.CertificateRequest) error
-	ValidateCert(cert *x509.Certificate) error
+	ValidateCert(cert, ca *x509.Certificate) error
 	Sign(csr *x509.CertificateRequest) ([]byte, error)
 	IssueToken(cert *x509.Certificate) ([]byte, error)
 	GetCACert() []byte
@@ -71,9 +71,25 @@ func (i *TriremeIssuer) ValidateRequest(csr *x509.CertificateRequest) error {
 	return csr.CheckSignature()
 }
 
-// ValidateCert validates if the certificate has been signed by the TriremeIssuer and if we can verify the certificate chain with it. Returns an error if it cannot be validated.
-func (i *TriremeIssuer) ValidateCert(cert *x509.Certificate) error {
-	err := cert.CheckSignatureFrom(i.signingCert)
+// ValidateCert validates if the certificate has been signed by the TriremeIssuer and if we can verify
+// the certificate chain with it. If `ca` is provided, the CA certificate is used instead of the TriremeIssuer
+// CA. Returns an error if it cannot be validated.
+func (i *TriremeIssuer) ValidateCert(cert, ca *x509.Certificate) error {
+	var err error
+	if ca != nil {
+		err = cert.CheckSignatureFrom(ca)
+		if err != nil {
+			return nil
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AddCert(ca)
+		_, err = cert.Verify(x509.VerifyOptions{
+			Roots: caCertPool,
+		})
+		return err
+	}
+
+	err = cert.CheckSignatureFrom(i.signingCert)
 	if err != nil {
 		return err
 	}

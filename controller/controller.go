@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -75,19 +76,57 @@ func (c *CertificateController) onAdd(obj interface{}) {
 	switch certRequest.Status.Phase {
 	case certificatev1alpha2.CertificateSigned:
 		zap.L().Debug("Added Cert request has already been processed and a certificate was issued", zap.String("name", certRequest.Name))
-		// TODO: if a cert is added as signed, we should validate it before we allow this
+		// if a cert is added as signed, we should validate it before we allow this status like this from scratch
+		// 1. check if the CSR was actually valid
+		csr, err := certRequest.GetCertificateRequest()
+		if err != nil {
+			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to get CSR: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			return
+		}
+		err = c.issuer.ValidateRequest(csr)
+		if err != nil {
+			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to validate CSR: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			return
+		}
+		// 2. check if the issued cert is valid
+		cert, err := certRequest.GetCertificate()
+		if err != nil {
+			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to get Certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			return
+		}
+		ca, err := certRequest.GetCACertificate()
+		if err != nil {
+			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to get CA Certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+			return
+		}
+		err = c.issuer.ValidateCert(cert, ca)
+		if err != nil {
+			c.updateCertRejected(certRequest, fmt.Errorf("changing phase to '%s': failed to validate signed certificate: %s", certificatev1alpha2.CertificateRejected, err.Error()))
+		}
+		// it is a valid object, nothing more to be done
+
 	case certificatev1alpha2.CertificateRejected:
 		zap.L().Debug("Added Cert request has already been processed and was rejected", zap.String("name", certRequest.Name))
+
 	case certificatev1alpha2.CertificateSubmitted:
 		zap.L().Info("Processing Cert request")
 		// we definitely want to process this request when the object has been created with the Submitted Phase
 		c.processCert(certRequest)
+
 	case certificatev1alpha2.CertificateUnknown:
-		// nothing has to be done when we are in the 'Unknown' phase
+		// nothing has to be done when we are in the 'Unknown' phase at Adding time
 		zap.L().Debug("Nothing has to be done for this Cert request")
+
 	default:
-		// this means that a phase is missing, so we move it to the Unknown phase
-		// the user will have to decide to move this into the Submitted phase
+		// this means that a phase is missing, which should be the default when one creates an object
+		// check if we have a spec, if yes, move it to the submitted phase
+		if certRequest.Spec.Request != nil && len(certRequest.Spec.Request) > 0 {
+			c.updateCertSubmitted(certRequest)
+			return
+		}
+
+		// there is no spec, so we move it to the Unknown phase
+		// the user will have to add a spec, so that it can get moved into the submitted phase
 		c.updateCertUnknown(certRequest)
 	}
 }
@@ -96,23 +135,41 @@ func (c *CertificateController) onUpdate(oldObj, newObj interface{}) {
 	zap.L().Debug("Updating Cert event")
 	certRequest, ok := newObj.(*certificatev1alpha2.Certificate)
 	if !ok {
-		zap.L().Sugar().Errorf("Received wrong object type in updating Cert event: '%T", newObj)
+		zap.L().Sugar().Errorf("Received wrong object type in updating Cert event for new object: '%T", newObj)
+		return
+	}
+	oldCertRequest, ok := oldObj.(*certificatev1alpha2.Certificate)
+	if !ok {
+		zap.L().Sugar().Errorf("Received wrong object type in updating Cert event for old object: '%T", oldObj)
 		return
 	}
 
 	switch certRequest.Status.Phase {
 	case certificatev1alpha2.CertificateSigned:
 		zap.L().Debug("Updated Cert request has been processed and a certificate was issued", zap.String("name", certRequest.Name))
+		// Signed is a final state in the update phase, nothing more has to be done
+
 	case certificatev1alpha2.CertificateRejected:
 		zap.L().Debug("Update Cert request has been processed and was rejected", zap.String("name", certRequest.Name))
+		// check if a new spec was submitted, and move to the submitted phase if yes
+		if certRequest.Spec.Request != nil && len(certRequest.Spec.Request) > 0 && !bytes.Equal(oldCertRequest.Spec.Request, certRequest.Spec.Request) {
+			c.updateCertSubmitted(certRequest)
+		}
+
 	case certificatev1alpha2.CertificateUnknown:
 		zap.L().Debug("Nothing has to be done for this Cert request")
+		// check if a spec has been submitted, and move it to the submitted phase if yes
+		if certRequest.Spec.Request != nil && len(certRequest.Spec.Request) > 0 && !bytes.Equal(oldCertRequest.Spec.Request, certRequest.Spec.Request) {
+			c.updateCertSubmitted(certRequest)
+		}
+
 	case certificatev1alpha2.CertificateSubmitted:
 		zap.L().Info("Processing Cert request")
-		// TODO: maybe we should rethink if we want to allow to resubmit a CSR?
 		c.processCert(certRequest)
+
 	default:
 		// this means that a phase is missing, so we move it to the Unknown phase
+		// as we honestly don't understand how we ended up in this state :)
 		c.updateCertUnknown(certRequest)
 	}
 }
@@ -169,10 +226,22 @@ func (c *CertificateController) processCert(certRequest *certificatev1alpha2.Cer
 	c.updateCertSigned(certRequest, cert, token)
 }
 
+func (c *CertificateController) updateCertSubmitted(certRequest *certificatev1alpha2.Certificate) {
+	certRequest.Status.Phase = certificatev1alpha2.CertificateSubmitted
+	certRequest.Status.Reason = certificatev1alpha2.StatusReasonSubmitted
+	certRequest.Status.Message = "The request contains a certificate request. Submitting certificate request for processing."
+
+	_, err := c.certificateClient.Certificates().Update(certRequest)
+	if err != nil {
+		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
+		return
+	}
+}
+
 func (c *CertificateController) updateCertUnknown(certRequest *certificatev1alpha2.Certificate) {
 	certRequest.Status.Phase = certificatev1alpha2.CertificateUnknown
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonUnprocessed
-	certRequest.Status.Message = "The request has not been processed by the controller yet. Submit this CSR by putting it into the 'Submitted' phase."
+	certRequest.Status.Message = "The request has not been processed by the controller yet. Submit a valid CSR in the spec to submit this CSR for processing."
 
 	_, err := c.certificateClient.Certificates().Update(certRequest)
 	if err != nil {
