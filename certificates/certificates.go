@@ -180,23 +180,38 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 				return fmt.Errorf("existing CSR object deleted %s", err.Error())
 			}
 
-			if cert.Status.Certificate != nil {
-				fmt.Printf("Cert is available: %+v", cert.Status.Certificate)
-				m.certPEM = cert.Status.Certificate
-				m.cert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
-				if err != nil {
-					return fmt.Errorf("couldn't parse certificate: %s", err.Error())
+			switch cert.Status.Phase {
+			case certificatev1alpha2.CertificateRejected:
+				return fmt.Errorf("Certificate issuing has been rejected by the controller: %s: %s", cert.Status.Reason, cert.Status.Message)
+
+			case certificatev1alpha2.CertificateUnknown:
+				return fmt.Errorf("The controller did not know how to handle our request and moved it to the '%s' phase (%s: %s)", certificatev1alpha2.CertificateUnknown, cert.Status.Reason, cert.Status.Message)
+
+			case certificatev1alpha2.CertificateSubmitted:
+				zap.L().Sugar().Debugf("Controller has accepted our request and moved it to the '%s' phase", certificatev1alpha2.CertificateSubmitted)
+				break
+
+			case certificatev1alpha2.CertificateSigned:
+				if cert.Status.Certificate != nil {
+					fmt.Printf("Cert is available: %+v", cert.Status.Certificate)
+					m.certPEM = cert.Status.Certificate
+					m.cert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
+					if err != nil {
+						return fmt.Errorf("couldn't parse certificate: %s", err.Error())
+					}
+
+					m.caCertPEM = cert.Status.Ca
+					m.caCert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
+					if err != nil {
+						return fmt.Errorf("couldn't parse CA certificate: %s", err.Error())
+					}
+
+					m.smartToken = cert.Status.Token
+					return nil
 				}
 
-				m.caCertPEM = cert.Status.Ca
-				m.caCert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
-				if err != nil {
-					return fmt.Errorf("couldn't parse CA certificate: %s", err.Error())
-				}
-
-				m.smartToken = cert.Status.Token
-
-				return nil
+			default:
+				zap.L().Debug("Unhandled certificate status phase", zap.String("phase", string(cert.Status.Phase)))
 			}
 		}
 	}
