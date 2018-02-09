@@ -295,7 +295,7 @@ func (c *CertificateController) updateCertSubmitted(certRequest *certificatev1al
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonSubmitted
 	certRequest.Status.Message = "The request contains a certificate request. Submitting certificate request for processing."
 
-	_, err := c.certificateClient.Certificates().UpdateStatus(certRequest)
+	_, err := c.certificateClient.Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
@@ -307,7 +307,7 @@ func (c *CertificateController) updateCertUnknown(certRequest *certificatev1alph
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonUnprocessed
 	certRequest.Status.Message = "The request has not been processed by the controller yet. Submit a valid CSR in the spec to submit this CSR for processing."
 
-	_, err := c.certificateClient.Certificates().UpdateStatus(certRequest)
+	_, err := c.certificateClient.Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
@@ -319,7 +319,7 @@ func (c *CertificateController) updateCertRejected(certRequest *certificatev1alp
 	certRequest.Status.Reason = reason
 	certRequest.Status.Message = rejectErr.Error()
 
-	_, err := c.certificateClient.Certificates().UpdateStatus(certRequest)
+	_, err := c.certificateClient.Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
@@ -335,7 +335,7 @@ func (c *CertificateController) updateCertSigned(certRequest *certificatev1alpha
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonProcessedApprovedSignedIssued
 	certRequest.Status.Message = "CSR has been processed and approved, and the Certificate has been signed and issued"
 
-	_, err := c.certificateClient.Certificates().UpdateStatus(certRequest)
+	_, err := c.certificateClient.Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
