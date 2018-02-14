@@ -16,9 +16,6 @@ const DefaultKubeConfigLocation = "/.kube/config"
 // Configuration contains all the User Parameter for Trireme-CSR.
 type Configuration struct {
 	KubeconfigPath string
-	InstallCRD     bool
-
-	GenerateCA bool
 
 	SigningCACert        string
 	SigningCACertData    []byte
@@ -41,8 +38,6 @@ func usage() {
 // 3) If no Env Variables, defaults are used when possible.
 func LoadConfig() (*Configuration, error) {
 	flag.Usage = usage
-	flag.Bool("InstallCRD", false, "Install CRD if not initialized ?")
-	flag.Bool("GenerateCA", false, "Generate CA for temporary use")
 	flag.String("KubeconfigPath", "", "KubeConfig used to connect to Kubernetes")
 	flag.String("LogLevel", "", "Log level. Default to info (trace//debug//info//warn//error//fatal)")
 	flag.String("LogFormat", "", "Log Format. Default to human")
@@ -52,8 +47,6 @@ func LoadConfig() (*Configuration, error) {
 	flag.String("SigningCacertKeyPass", "", "Password for the signing CA.")
 
 	// Setting up default configuration
-	viper.SetDefault("InstallCRD", false)
-	viper.SetDefault("GenerateCA", false)
 	viper.SetDefault("KubeconfigPath", "")
 	viper.SetDefault("LogLevel", "info")
 	viper.SetDefault("LogFormat", "human")
@@ -99,20 +92,18 @@ func validateConfig(config *Configuration) error {
 		config.KubeconfigPath = ""
 	}
 
-	if !config.GenerateCA {
-		signingcadata, err := ioutil.ReadFile(config.SigningCACert)
-		if err != nil {
-			return fmt.Errorf("unable to read signing CA file: %s", err.Error())
-		}
-
-		signingcakeydata, err := ioutil.ReadFile(config.SigningCACertKey)
-		if err != nil {
-			return fmt.Errorf("unable to read signing CA key file: %s", err.Error())
-		}
-
-		config.SigningCACertData = signingcadata
-		config.SigningCACertKeyData = signingcakeydata
+	signingcadata, err := ioutil.ReadFile(config.SigningCACert)
+	if err != nil {
+		return fmt.Errorf("unable to read signing CA file: %s", err.Error())
 	}
+
+	signingcakeydata, err := ioutil.ReadFile(config.SigningCACertKey)
+	if err != nil {
+		return fmt.Errorf("unable to read signing CA key file: %s", err.Error())
+	}
+
+	config.SigningCACertData = signingcadata
+	config.SigningCACertKeyData = signingcakeydata
 
 	return nil
 }

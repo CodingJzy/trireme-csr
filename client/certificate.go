@@ -5,40 +5,37 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 
-	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
+	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/apis/v1alpha2"
 )
 
 // CertificateInterface is the interface to the certificates
 type CertificateInterface interface {
-	Create(*certificatev1alpha1.Certificate) (*certificatev1alpha1.Certificate, error)
-	Update(*certificatev1alpha1.Certificate) (*certificatev1alpha1.Certificate, error)
-	//UpdateStatus(*certificatev1alpha1.Certificate) (*certificatev1alpha1.Certificate, error)
+	Create(*certificatev1alpha2.Certificate) (*certificatev1alpha2.Certificate, error)
+	Update(*certificatev1alpha2.Certificate) (*certificatev1alpha2.Certificate, error)
+	UpdateStatus(*certificatev1alpha2.Certificate) (*certificatev1alpha2.Certificate, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	//DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*certificatev1alpha1.Certificate, error)
-	List(opts meta_v1.ListOptions) (*certificatev1alpha1.CertificateList, error)
+	Get(name string, options meta_v1.GetOptions) (*certificatev1alpha2.Certificate, error)
+	List(opts meta_v1.ListOptions) (*certificatev1alpha2.CertificateList, error)
 	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
-	//Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *certificatev1alpha1.Certificate, err error)
+	//Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *certificatev1alpha2.Certificate, err error)
 }
 
 // certificates implements certificateInterface
 type certificates struct {
 	client rest.Interface
-	ns     string
 }
 
 // newcertificates returns a certificates
-func newCertificates(c *CertificateClient, namespace string) *certificates {
+func newCertificates(c *CertificateClient) *certificates {
 	return &certificates{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
-func (c *certificates) Create(certificate *certificatev1alpha1.Certificate) (result *certificatev1alpha1.Certificate, err error) {
-	result = &certificatev1alpha1.Certificate{}
+func (c *certificates) Create(certificate *certificatev1alpha2.Certificate) (result *certificatev1alpha2.Certificate, err error) {
+	result = &certificatev1alpha2.Certificate{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("certificates").
 		Body(certificate).
 		Do().
@@ -47,12 +44,24 @@ func (c *certificates) Create(certificate *certificatev1alpha1.Certificate) (res
 }
 
 // Update takes the representation of a certificate and updates it. Returns the server's representation of the certificate, and an error, if there is any.
-func (c *certificates) Update(certificate *certificatev1alpha1.Certificate) (result *certificatev1alpha1.Certificate, err error) {
-	result = &certificatev1alpha1.Certificate{}
+func (c *certificates) Update(certificate *certificatev1alpha2.Certificate) (result *certificatev1alpha2.Certificate, err error) {
+	result = &certificatev1alpha2.Certificate{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("certificates").
 		Name(certificate.Name).
+		Body(certificate).
+		Do().
+		Into(result)
+	return
+}
+
+// Update takes the representation of a certificate and updates it. Returns the server's representation of the certificate, and an error, if there is any.
+func (c *certificates) UpdateStatus(certificate *certificatev1alpha2.Certificate) (result *certificatev1alpha2.Certificate, err error) {
+	result = &certificatev1alpha2.Certificate{}
+	err = c.client.Put().
+		Resource("certificates").
+		Name(certificate.Name).
+		SubResource("status").
 		Body(certificate).
 		Do().
 		Into(result)
@@ -62,7 +71,6 @@ func (c *certificates) Update(certificate *certificatev1alpha1.Certificate) (res
 // Delete takes name of the certificate and deletes it. Returns an error if one occurs.
 func (c *certificates) Delete(name string, options *meta_v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("certificates").
 		Name(name).
 		Do().
@@ -70,10 +78,9 @@ func (c *certificates) Delete(name string, options *meta_v1.DeleteOptions) error
 }
 
 // Get takes name of the certificate, and returns the corresponding certificate object, and an error if there is any.
-func (c *certificates) Get(name string, options meta_v1.GetOptions) (result *certificatev1alpha1.Certificate, err error) {
-	result = &certificatev1alpha1.Certificate{}
+func (c *certificates) Get(name string, options meta_v1.GetOptions) (result *certificatev1alpha2.Certificate, err error) {
+	result = &certificatev1alpha2.Certificate{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("certificates").
 		Name(name).
 		Do().
@@ -82,10 +89,9 @@ func (c *certificates) Get(name string, options meta_v1.GetOptions) (result *cer
 }
 
 // List takes label and field selectors, and returns the list of certificates that match those selectors.
-func (c *certificates) List(opts meta_v1.ListOptions) (result *certificatev1alpha1.CertificateList, err error) {
-	result = &certificatev1alpha1.CertificateList{}
+func (c *certificates) List(opts meta_v1.ListOptions) (result *certificatev1alpha2.CertificateList, err error) {
+	result = &certificatev1alpha2.CertificateList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("certificates").
 		Do().
 		Into(result)
@@ -96,7 +102,6 @@ func (c *certificates) List(opts meta_v1.ListOptions) (result *certificatev1alph
 func (c *certificates) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("certificates").
 		Watch()
 }

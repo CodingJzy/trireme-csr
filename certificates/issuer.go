@@ -14,9 +14,10 @@ import (
 	"github.com/aporeto-inc/trireme-lib/enforcer/utils/pkiverifier"
 )
 
-// Issuer is able to validate and sign certificates baed on a CSR.
+// Issuer is able to validate and sign certificates based on a CSR.
 type Issuer interface {
-	Validate(csr *x509.CertificateRequest) error
+	ValidateRequest(csr *x509.CertificateRequest) error
+	ValidateCert(cert, ca *x509.Certificate) error
 	Sign(csr *x509.CertificateRequest) ([]byte, error)
 	IssueToken(cert *x509.Certificate) ([]byte, error)
 	GetCACert() []byte
@@ -27,22 +28,24 @@ type TriremeIssuer struct {
 	signingCert    *x509.Certificate
 	signingCertPEM []byte
 	signingKey     crypto.PrivateKey
-
-	tokenIssuer pkiverifier.PKITokenIssuer
+	caCertPool     *x509.CertPool
+	tokenIssuer    pkiverifier.PKITokenIssuer
 }
 
 // NewTriremeIssuer creates an issuer based on crypto CA objects
 // TODO: Remove the double reference to the SigningCert.
 func NewTriremeIssuer(signingCertPEM []byte, signingCert *x509.Certificate, signingKey crypto.PrivateKey, signingKeyPass string) (*TriremeIssuer, error) {
-	// TODO: Bettre validation of parameters here.
+	// TODO: Better validation of parameters here.
 	pkiIssuer := pkiverifier.NewPKIIssuer(signingKey.(*ecdsa.PrivateKey))
+	caCertPool := x509.NewCertPool()
+	caCertPool.AddCert(signingCert)
 
 	return &TriremeIssuer{
 		signingCert:    signingCert,
 		signingCertPEM: signingCertPEM,
 		signingKey:     signingKey,
-
-		tokenIssuer: pkiIssuer,
+		caCertPool:     caCertPool,
+		tokenIssuer:    pkiIssuer,
 	}, nil
 }
 
@@ -61,9 +64,39 @@ func NewTriremeIssuerFromPath(signingCertPath, signingCertKeyPath, signingKeyPas
 	return NewTriremeIssuer(caCertPEM, signingCert, signingKey, signingKeyPass)
 }
 
-// Validate verifys that the CSR is allowed to be issued. Return an error if not allowed.
-func (i *TriremeIssuer) Validate(csr *x509.CertificateRequest) error {
-	return nil
+// ValidateRequest verifies that the CSR is valid and is allowed to be issued. Return an error if not allowed.
+func (i *TriremeIssuer) ValidateRequest(csr *x509.CertificateRequest) error {
+	// we check the signature for validation only at the moment
+	// TODO: there should be more criteria than just a valid signature
+	return csr.CheckSignature()
+}
+
+// ValidateCert validates if the certificate has been signed by the TriremeIssuer and if we can verify
+// the certificate chain with it. If `ca` is provided, the CA certificate is used instead of the TriremeIssuer
+// CA. Returns an error if it cannot be validated.
+func (i *TriremeIssuer) ValidateCert(cert, ca *x509.Certificate) error {
+	var err error
+	if ca != nil {
+		err = cert.CheckSignatureFrom(ca)
+		if err != nil {
+			return nil
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AddCert(ca)
+		_, err = cert.Verify(x509.VerifyOptions{
+			Roots: caCertPool,
+		})
+		return err
+	}
+
+	err = cert.CheckSignatureFrom(i.signingCert)
+	if err != nil {
+		return err
+	}
+	_, err = cert.Verify(x509.VerifyOptions{
+		Roots: i.caCertPool,
+	})
+	return err
 }
 
 // Sign generate a signed and valid certificate for the CSR given as parameter

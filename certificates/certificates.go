@@ -13,7 +13,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	certificatev1alpha1 "github.com/aporeto-inc/trireme-csr/apis/v1alpha1"
+	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/apis/v1alpha2"
 	certificateclient "github.com/aporeto-inc/trireme-csr/client"
 )
 
@@ -139,30 +139,30 @@ func (m *CertManager) GetSmartToken() ([]byte, error) {
 func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 
 	// First check if the certificate was already issued.
-	certs, err := m.certClient.Certificates("default").List(metav1.ListOptions{})
+	certs, err := m.certClient.Certificates().List(metav1.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("Couldn't query for existing CSR object list %s", err)
+		return fmt.Errorf("Couldn't query for existing CSR object list: %s", err.Error())
 	}
 	for _, cert := range certs.Items {
 		if cert.Name == m.certName {
-			if err := m.certClient.Certificates("default").Delete(cert.Name, &metav1.DeleteOptions{}); err != nil {
-				return fmt.Errorf("Error deleting existing cert for node: %s", err)
+			if err = m.certClient.Certificates().Delete(cert.Name, &metav1.DeleteOptions{}); err != nil {
+				return fmt.Errorf("Error deleting existing cert for node: %s", err.Error())
 			}
 		}
 	}
 
 	// Generate the new certificate kube object
-	kubeCert := &certificatev1alpha1.Certificate{
-		Spec: certificatev1alpha1.CertificateSpec{
+	kubeCert := &certificatev1alpha2.Certificate{
+		Spec: certificatev1alpha2.CertificateSpec{
 			Request: m.csr,
 		},
 	}
 	kubeCert.Name = m.certName
 
 	zap.L().Info("Creating new certificate object on Kube API", zap.String("certName", m.certName))
-	_, err = m.certClient.Certificates("default").Create(kubeCert)
+	_, err = m.certClient.Certificates().Create(kubeCert)
 	if err != nil {
-		return fmt.Errorf("Couldn't create CSR Kube object %s", err)
+		return fmt.Errorf("couldn't create CSR Kube object: %s", err.Error())
 	}
 
 	timeoutChan := time.After(timeout)
@@ -175,28 +175,43 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 
 		case <-tickerChan:
 			zap.L().Info("Verifying if Certificate was issued by controller...", zap.String("certName", m.certName))
-			cert, err := m.certClient.Certificates("default").Get(m.certName, metav1.GetOptions{})
+			cert, err := m.certClient.Certificates().Get(m.certName, metav1.GetOptions{})
 			if err != nil {
-				return fmt.Errorf("Existing CSR object deleted %s", err)
+				return fmt.Errorf("existing CSR object deleted %s", err.Error())
 			}
 
-			if cert.Status.Certificate != nil {
-				fmt.Printf("Cert is available: %+v", cert.Status.Certificate)
-				m.certPEM = cert.Status.Certificate
-				m.cert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
-				if err != nil {
-					return fmt.Errorf("Couldn't parse certificate %s", err)
+			switch cert.Status.Phase {
+			case certificatev1alpha2.CertificateRejected:
+				return fmt.Errorf("Certificate issuing has been rejected by the controller: %s: %s", cert.Status.Reason, cert.Status.Message)
+
+			case certificatev1alpha2.CertificateUnknown:
+				return fmt.Errorf("The controller did not know how to handle our request and moved it to the '%s' phase (%s: %s)", certificatev1alpha2.CertificateUnknown, cert.Status.Reason, cert.Status.Message)
+
+			case certificatev1alpha2.CertificateSubmitted:
+				zap.L().Sugar().Debugf("Controller has accepted our request and moved it to the '%s' phase", certificatev1alpha2.CertificateSubmitted)
+				break
+
+			case certificatev1alpha2.CertificateSigned:
+				if cert.Status.Certificate != nil {
+					fmt.Printf("Cert is available: %+v", cert.Status.Certificate)
+					m.certPEM = cert.Status.Certificate
+					m.cert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
+					if err != nil {
+						return fmt.Errorf("couldn't parse certificate: %s", err.Error())
+					}
+
+					m.caCertPEM = cert.Status.Ca
+					m.caCert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
+					if err != nil {
+						return fmt.Errorf("couldn't parse CA certificate: %s", err.Error())
+					}
+
+					m.smartToken = cert.Status.Token
+					return nil
 				}
 
-				m.caCertPEM = cert.Status.Ca
-				m.caCert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
-				if err != nil {
-					return fmt.Errorf("Couldn't parse CA certificate %s", err)
-				}
-
-				m.smartToken = cert.Status.Token
-
-				return nil
+			default:
+				zap.L().Debug("Unhandled certificate status phase", zap.String("phase", string(cert.Status.Phase)))
 			}
 		}
 	}
