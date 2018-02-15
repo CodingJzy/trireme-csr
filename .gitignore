@@ -1,5 +1,10 @@
+.DS_Store
 cmd/ClientEmulator/ClientEmulator
 vendor/
 trireme-csr
-glide.lock
+Gopkg.lock
 run.sh
+ca-cert.pem
+ca-key.pem
+k8s/ecdsa.csr.pem
+k8s/ecdsa.key.pem
