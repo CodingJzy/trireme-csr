@@ -9,8 +9,8 @@ import (
 	"github.com/aporeto-inc/trireme-csr/certificates"
 	"github.com/aporeto-inc/trireme-csr/config"
 
-	certificateclient "github.com/aporeto-inc/trireme-csr/client"
 	certificatecontroller "github.com/aporeto-inc/trireme-csr/controller"
+	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -37,10 +37,7 @@ func main() {
 		panic("Error generating Kubeconfig " + err.Error())
 	}
 
-	certClient, _, err := certificateclient.NewClient(kubeconfig)
-	if err != nil {
-		panic("Error creating REST Kube Client for certificates: " + err.Error())
-	}
+	certClient := certificateclient.NewForConfigOrDie(kubeconfig)
 
 	// start a controller on instances of the Certificates custom resource
 	certController, err := certificatecontroller.NewCertificateController(certClient, issuer)

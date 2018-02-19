@@ -10,21 +10,21 @@ import (
 
 	"go.uber.org/zap"
 
-	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/apis/v1alpha2"
 	"github.com/aporeto-inc/trireme-csr/certificates"
-	certificateclient "github.com/aporeto-inc/trireme-csr/client"
+	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
+	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
 
 	"github.com/aporeto-inc/tg/tglib"
 )
 
 // CertificateController contains all the logic to implement the issuance of certificates.
 type CertificateController struct {
-	certificateClient *certificateclient.CertificateClient
+	certificateClient certificateclient.Interface
 	issuer            certificates.Issuer
 }
 
 // NewCertificateController generates the new CertificateController
-func NewCertificateController(certificateClient *certificateclient.CertificateClient, issuer certificates.Issuer) (*CertificateController, error) {
+func NewCertificateController(certificateClient certificateclient.Interface, issuer certificates.Issuer) (*CertificateController, error) {
 
 	return &CertificateController{
 		certificateClient: certificateClient,
@@ -47,7 +47,7 @@ func (c *CertificateController) Run() error {
 
 func (c *CertificateController) watchCerts() (cache.Controller, error) {
 	source := cache.NewListWatchFromClient(
-		c.certificateClient.RESTClient(),
+		c.certificateClient.CertmanagerV1alpha2().RESTClient(),
 		certificatev1alpha2.CertificateResourcePlural,
 		"",
 		fields.Everything())
@@ -307,7 +307,7 @@ func (c *CertificateController) updateCertSubmitted(certRequest *certificatev1al
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonSubmitted
 	certRequest.Status.Message = "The request contains a certificate request. Submitting certificate request for processing."
 
-	_, err := c.certificateClient.Certificates().Update(certRequest)
+	_, err := c.certificateClient.CertmanagerV1alpha2().Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
@@ -319,7 +319,7 @@ func (c *CertificateController) updateCertUnknown(certRequest *certificatev1alph
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonUnprocessed
 	certRequest.Status.Message = "The request has not been processed by the controller yet. Submit a valid CSR in the spec to submit this CSR for processing."
 
-	_, err := c.certificateClient.Certificates().Update(certRequest)
+	_, err := c.certificateClient.CertmanagerV1alpha2().Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
@@ -331,7 +331,7 @@ func (c *CertificateController) updateCertRejected(certRequest *certificatev1alp
 	certRequest.Status.Reason = reason
 	certRequest.Status.Message = rejectErr.Error()
 
-	_, err := c.certificateClient.Certificates().Update(certRequest)
+	_, err := c.certificateClient.CertmanagerV1alpha2().Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
@@ -347,7 +347,7 @@ func (c *CertificateController) updateCertSigned(certRequest *certificatev1alpha
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonProcessedApprovedSignedIssued
 	certRequest.Status.Message = "CSR has been processed and approved, and the Certificate has been signed and issued"
 
-	_, err := c.certificateClient.Certificates().Update(certRequest)
+	_, err := c.certificateClient.CertmanagerV1alpha2().Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
 		return
