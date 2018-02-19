@@ -31,7 +31,7 @@ CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -1 ./vendor/k8s.io/code-ge
 # To use your own boilerplate text append:
 #   --go-header-file ${SCRIPT_ROOT}/hack/custom-boilerplate.go.txt
 ${CODEGEN_PKG}/generate-groups.sh \
-  "all" \
+  "deepcopy,defaulter,client,lister,informer" \
   github.com/aporeto-inc/trireme-csr/pkg/client \
   github.com/aporeto-inc/trireme-csr/pkg/apis \
   "certmanager.k8s.io:v1alpha1,v1alpha2" \

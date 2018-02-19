@@ -44,6 +44,14 @@
   name = "k8s.io/code-generator"
   branch = "master"
 
+[[constraint]]
+  name = "k8s.io/gengo"
+  branch = "master"
+
+[[constraint]]
+  name = "k8s.io/kube-openapi"
+  branch = "master"
+
 
 ##
 ## 3rd Party
@@ -73,3 +81,11 @@
     unused-packages = false
     # this is the default anyway
     #non-go = false
+  
+  [[prune.project]]
+    name = "k8s.io/gengo"
+    unused-packages = false
+  
+  [[prune.project]]
+    name = "k8s.io/kube-openapi"
+    unused-packages = false
