@@ -51,17 +51,14 @@ func NewCertificateController(certificateClient certificateclient.Interface, cer
 func (c *CertificateController) Run(stopCh <-chan struct{}) error {
 	zap.L().Info("start watching Certificates objects")
 
-	// considered deprecated
-	//defer runtime.HandleCrash()
-
 	// wait for caches to sync
 	ok := cache.WaitForCacheSync(stopCh, c.certificateInformer.Informer().HasSynced)
 	if !ok {
 		return fmt.Errorf("error while waiting for caches to sync")
 	}
 
-	// now run the informer until the stopCh closes
-	c.certificateInformer.Informer().Run(stopCh)
+	// now wait until the stopCh closes
+	<-stopCh
 	return nil
 }
 

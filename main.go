@@ -47,14 +47,14 @@ func main() {
 		zap.L().Fatal("Error creating CertificateClient", zap.Error(err))
 	}
 
-	// create CertificateInformer Factory
+	// create CertificateInformer Factory for a shared informer
 	certInformerFactory := certificateinformers.NewSharedInformerFactory(certClient, time.Second*30)
 
 	// create our controller
 	certController := certificatecontroller.NewCertificateController(certClient, certInformerFactory, issuer)
 
-	// TODO: still not sure what this actually does
-	go certInformerFactory.Start(sigsCh)
+	// start the shared informer (internally, it calls Run(sigsCh) on the shared informer)
+	certInformerFactory.Start(sigsCh)
 
 	// start and block
 	err = certController.Run(sigsCh)
