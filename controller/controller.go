@@ -5,65 +5,64 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/tools/cache"
-
 	"go.uber.org/zap"
 
+	"github.com/aporeto-inc/tg/tglib"
 	"github.com/aporeto-inc/trireme-csr/certificates"
+
+	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/cache"
+
 	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
 	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
-
-	"github.com/aporeto-inc/tg/tglib"
+	certificateinformers "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions"
+	certificateinformerv1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io/v1alpha2"
 )
 
 // CertificateController contains all the logic to implement the issuance of certificates.
 type CertificateController struct {
-	certificateClient certificateclient.Interface
-	issuer            certificates.Issuer
+	certificateClient   certificateclient.Interface
+	certificateInformer certificateinformerv1alpha2.CertificateInformer
+	issuer              certificates.Issuer
 }
 
 // NewCertificateController generates the new CertificateController
-func NewCertificateController(certificateClient certificateclient.Interface, issuer certificates.Issuer) (*CertificateController, error) {
+func NewCertificateController(certificateClient certificateclient.Interface, certificateInformerFactory certificateinformers.SharedInformerFactory, issuer certificates.Issuer) *CertificateController {
 
-	return &CertificateController{
-		certificateClient: certificateClient,
-		issuer:            issuer,
-	}, nil
-}
+	certificateInformer := certificateInformerFactory.Certmanager().V1alpha2().Certificates()
 
-// Run starts the certificateWatcher.
-func (c *CertificateController) Run() error {
-	zap.L().Info("start watching Certificates objects")
-
-	// Watch Certificate objects
-	_, err := c.watchCerts()
-	if err != nil {
-		return fmt.Errorf("failed to register watch for Certificate CRD resource: %s", err)
+	c := &CertificateController{
+		certificateClient:   certificateClient,
+		certificateInformer: certificateInformer,
+		issuer:              issuer,
 	}
 
-	return nil
-}
-
-func (c *CertificateController) watchCerts() (cache.Controller, error) {
-	source := cache.NewListWatchFromClient(
-		c.certificateClient.CertmanagerV1alpha2().RESTClient(),
-		certificatev1alpha2.CertificateResourcePlural,
-		"",
-		fields.Everything())
-
-	_, controller := cache.NewInformer(
-		source,
-		&certificatev1alpha2.Certificate{},
-		0,
+	certificateInformer.Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.onAdd,
 			UpdateFunc: c.onUpdate,
 			DeleteFunc: c.onDelete,
-		})
+		},
+	)
 
-	go controller.Run(nil)
-	return controller, nil
+	return c
+}
+
+// Run starts the certificateWatcher.
+func (c *CertificateController) Run(stopCh <-chan struct{}) error {
+	zap.L().Info("start watching Certificates objects")
+
+	defer runtime.HandleCrash()
+
+	// wait for caches to sync
+	ok := cache.WaitForCacheSync(stopCh, c.certificateInformer.Informer().HasSynced)
+	if !ok {
+		return fmt.Errorf("error while waiting for caches to sync")
+	}
+
+	// now run the informer until the stopCh closes
+	c.certificateInformer.Informer().Run(stopCh)
+	return nil
 }
 
 func (c *CertificateController) onAdd(obj interface{}) {
@@ -302,11 +301,14 @@ func (c *CertificateController) process(certRequest *certificatev1alpha2.Certifi
 	c.updateCertSigned(certRequest, cert, token)
 }
 
-func (c *CertificateController) updateCertSubmitted(certRequest *certificatev1alpha2.Certificate) {
+func (c *CertificateController) updateCertSubmitted(certRequestObj *certificatev1alpha2.Certificate) {
+	certRequest := certRequestObj.DeepCopy()
 	certRequest.Status.Phase = certificatev1alpha2.CertificateSubmitted
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonSubmitted
 	certRequest.Status.Message = "The request contains a certificate request. Submitting certificate request for processing."
 
+	// we can not use UpdateStatus until this issue gets resolved afaik
+	// https://github.com/kubernetes/kubernetes/issues/38113
 	_, err := c.certificateClient.CertmanagerV1alpha2().Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
@@ -314,11 +316,14 @@ func (c *CertificateController) updateCertSubmitted(certRequest *certificatev1al
 	}
 }
 
-func (c *CertificateController) updateCertUnknown(certRequest *certificatev1alpha2.Certificate) {
+func (c *CertificateController) updateCertUnknown(certRequestObj *certificatev1alpha2.Certificate) {
+	certRequest := certRequestObj.DeepCopy()
 	certRequest.Status.Phase = certificatev1alpha2.CertificateUnknown
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonUnprocessed
 	certRequest.Status.Message = "The request has not been processed by the controller yet. Submit a valid CSR in the spec to submit this CSR for processing."
 
+	// we can not use UpdateStatus until this issue gets resolved afaik
+	// https://github.com/kubernetes/kubernetes/issues/38113
 	_, err := c.certificateClient.CertmanagerV1alpha2().Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
@@ -326,11 +331,14 @@ func (c *CertificateController) updateCertUnknown(certRequest *certificatev1alph
 	}
 }
 
-func (c *CertificateController) updateCertRejected(certRequest *certificatev1alpha2.Certificate, reason string, rejectErr error) {
+func (c *CertificateController) updateCertRejected(certRequestObj *certificatev1alpha2.Certificate, reason string, rejectErr error) {
+	certRequest := certRequestObj.DeepCopy()
 	certRequest.Status.Phase = certificatev1alpha2.CertificateRejected
 	certRequest.Status.Reason = reason
 	certRequest.Status.Message = rejectErr.Error()
 
+	// we can not use UpdateStatus until this issue gets resolved afaik
+	// https://github.com/kubernetes/kubernetes/issues/38113
 	_, err := c.certificateClient.CertmanagerV1alpha2().Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
@@ -339,7 +347,8 @@ func (c *CertificateController) updateCertRejected(certRequest *certificatev1alp
 }
 
 // updateCertSigned is called when a request has been successfully processed/approved/signed
-func (c *CertificateController) updateCertSigned(certRequest *certificatev1alpha2.Certificate, cert, token []byte) {
+func (c *CertificateController) updateCertSigned(certRequestObj *certificatev1alpha2.Certificate, cert, token []byte) {
+	certRequest := certRequestObj.DeepCopy()
 	certRequest.Status.Certificate = cert
 	certRequest.Status.Ca = c.issuer.GetCACert()
 	certRequest.Status.Token = token
@@ -347,6 +356,8 @@ func (c *CertificateController) updateCertSigned(certRequest *certificatev1alpha
 	certRequest.Status.Reason = certificatev1alpha2.StatusReasonProcessedApprovedSignedIssued
 	certRequest.Status.Message = "CSR has been processed and approved, and the Certificate has been signed and issued"
 
+	// we can not use UpdateStatus until this issue gets resolved afaik
+	// https://github.com/kubernetes/kubernetes/issues/38113
 	_, err := c.certificateClient.CertmanagerV1alpha2().Certificates().Update(certRequest)
 	if err != nil {
 		zap.L().Error("Error Updating the Certificate ressource", zap.Error(err), zap.String("name", certRequest.Name))
