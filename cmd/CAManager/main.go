@@ -1,14 +1,19 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	camgr "github.com/aporeto-inc/trireme-csr/ca/mgr"
 	kubepersistor "github.com/aporeto-inc/trireme-csr/ca/persistor/kubernetes"
 )
 
 func main() {
-	setLogs("info")
 
 	kubeclient, err := newKubeClient()
 	if err != nil {
@@ -29,14 +34,26 @@ func main() {
 	mgr.GenerateCA()
 }
 
-// setLogs setups Zap to the specified logLevel.
-func setLogs(logLevel string) error {
-	zapConfig := zap.NewDevelopmentConfig()
-	zapConfig.DisableStacktrace = true
+// setLogs setups Zap to the correct log level and correct output format.
+func setLogs(logFormat, logLevel string) error {
+	var zapConfig zap.Config
+
+	switch logFormat {
+	case "json":
+		zapConfig = zap.NewProductionConfig()
+		zapConfig.DisableStacktrace = true
+	default:
+		zapConfig = zap.NewDevelopmentConfig()
+		zapConfig.DisableStacktrace = true
+		zapConfig.DisableCaller = true
+		zapConfig.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {}
+		zapConfig.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	}
 
 	// Set the logger
 	switch logLevel {
 	case "trace":
+		// TODO: Set the level correctly
 		zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	case "debug":
 		zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
@@ -57,6 +74,30 @@ func setLogs(logLevel string) error {
 		return err
 	}
 
+	go func(config zap.Config) {
+
+		defaultLevel := config.Level
+		var elevated bool
+
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGUSR1)
+		for s := range c {
+			if s == syscall.SIGINT {
+				return
+			}
+			elevated = !elevated
+
+			if elevated {
+				config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+				zap.L().Info("Log level elevated to debug")
+			} else {
+				zap.L().Info("Log level restored to original configuration", zap.String("level", logLevel))
+				config.Level = defaultLevel
+			}
+		}
+	}(zapConfig)
+
 	zap.ReplaceGlobals(logger)
+
 	return nil
 }
