@@ -9,8 +9,9 @@ import (
 	"github.com/aporeto-inc/trireme-csr/certificates"
 	"github.com/aporeto-inc/trireme-csr/config"
 
-	certificateclient "github.com/aporeto-inc/trireme-csr/client"
 	certificatecontroller "github.com/aporeto-inc/trireme-csr/controller"
+	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
+	certificateinformers "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -26,6 +27,9 @@ func main() {
 	}
 	setLogs(config.LogFormat, config.LogLevel)
 
+	// creating OS signal handlers for shutdown handling
+	sigsCh := createSignalChannel()
+
 	issuer, err := certificates.NewTriremeIssuerFromPath(config.SigningCACert, config.SigningCACertKey, config.SigningCACertKeyPass)
 	if err != nil {
 		panic("Error creating Certificate Issuer " + err.Error())
@@ -37,20 +41,26 @@ func main() {
 		panic("Error generating Kubeconfig " + err.Error())
 	}
 
-	certClient, _, err := certificateclient.NewClient(kubeconfig)
+	// create CertificateClient
+	certClient, err := certificateclient.NewForConfig(kubeconfig)
 	if err != nil {
-		panic("Error creating REST Kube Client for certificates: " + err.Error())
+		zap.L().Fatal("Error creating CertificateClient", zap.Error(err))
 	}
 
-	// start a controller on instances of the Certificates custom resource
-	certController, err := certificatecontroller.NewCertificateController(certClient, issuer)
+	// create CertificateInformer Factory for a shared informer
+	certInformerFactory := certificateinformers.NewSharedInformerFactory(certClient, time.Second*30)
+
+	// create our controller
+	certController := certificatecontroller.NewCertificateController(certClient, certInformerFactory, issuer)
+
+	// start the shared informer (internally, it calls Run(sigsCh) on the shared informer)
+	certInformerFactory.Start(sigsCh)
+
+	// start and block
+	err = certController.Run(sigsCh)
 	if err != nil {
-		panic("Error creating CertificateController" + err.Error())
+		zap.L().Fatal("Error running CertificateController", zap.Error(err))
 	}
-
-	go certController.Run()
-
-	waitForSig()
 
 	zap.L().Info("Trireme-CSR exiting")
 }
@@ -105,11 +115,26 @@ func buildConfig(kubeconfig string) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
-func waitForSig() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	zap.L().Info("Everything started. Waiting for Stop signal")
-	// Waiting for a Sig
-	<-c
-	zap.L().Info("SIG received. Exiting")
+func createSignalChannel() <-chan struct{} {
+	stopCh := make(chan struct{})
+	sigsCh := make(chan os.Signal, 2)
+	signal.Notify(sigsCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go func() {
+		// wait for OS signals here,
+		// close when we receive a signal
+		sig := <-sigsCh
+		zap.L().Info("SIG received. Exiting...", zap.String("signal", sig.String()))
+		close(stopCh)
+
+		// we will wait a second time,
+		// if an immediate signal comes
+		// before everything could have been shutdown
+		// we force an exit
+		sig = <-sigsCh
+		zap.L().Info("2nd SIG received. Forcing Exit!", zap.String("signal", sig.String()))
+		os.Exit(1)
+	}()
+
+	return stopCh
 }

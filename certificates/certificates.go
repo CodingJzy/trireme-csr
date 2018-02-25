@@ -13,8 +13,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/apis/v1alpha2"
-	certificateclient "github.com/aporeto-inc/trireme-csr/client"
+	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
+	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
 )
 
 // CertManager manages the client side for the client.
@@ -34,11 +34,11 @@ type CertManager struct {
 
 	smartToken []byte
 
-	certClient *certificateclient.CertificateClient
+	certClient certificateclient.Interface
 }
 
 // NewCertManager creates a NewCertManager with default.
-func NewCertManager(name string, certClient *certificateclient.CertificateClient) (*CertManager, error) {
+func NewCertManager(name string, certClient certificateclient.Interface) (*CertManager, error) {
 	return &CertManager{
 		certName:   name,
 		certClient: certClient,
@@ -139,13 +139,13 @@ func (m *CertManager) GetSmartToken() ([]byte, error) {
 func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 
 	// First check if the certificate was already issued.
-	certs, err := m.certClient.Certificates().List(metav1.ListOptions{})
+	certs, err := m.certClient.CertmanagerV1alpha2().Certificates().List(metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Couldn't query for existing CSR object list: %s", err.Error())
 	}
 	for _, cert := range certs.Items {
 		if cert.Name == m.certName {
-			if err = m.certClient.Certificates().Delete(cert.Name, &metav1.DeleteOptions{}); err != nil {
+			if err = m.certClient.CertmanagerV1alpha2().Certificates().Delete(cert.Name, &metav1.DeleteOptions{}); err != nil {
 				return fmt.Errorf("Error deleting existing cert for node: %s", err.Error())
 			}
 		}
@@ -160,7 +160,7 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 	kubeCert.Name = m.certName
 
 	zap.L().Info("Creating new certificate object on Kube API", zap.String("certName", m.certName))
-	_, err = m.certClient.Certificates().Create(kubeCert)
+	_, err = m.certClient.CertmanagerV1alpha2().Certificates().Create(kubeCert)
 	if err != nil {
 		return fmt.Errorf("couldn't create CSR Kube object: %s", err.Error())
 	}
@@ -175,7 +175,7 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 
 		case <-tickerChan:
 			zap.L().Info("Verifying if Certificate was issued by controller...", zap.String("certName", m.certName))
-			cert, err := m.certClient.Certificates().Get(m.certName, metav1.GetOptions{})
+			cert, err := m.certClient.CertmanagerV1alpha2().Certificates().Get(m.certName, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("existing CSR object deleted %s", err.Error())
 			}

@@ -14,7 +14,7 @@ import (
 	"github.com/aporeto-inc/trireme-csr/certificates"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	certificateclient "github.com/aporeto-inc/trireme-csr/client"
+	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
 )
 
 // KubeconfigPath is the static path to my KubeConfig
@@ -29,10 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	certClient, _, err := certificateclient.NewClient(config)
-	if err != nil {
-		panic("Error creating REST Kube Client: ")
-	}
+	certClient := certificateclient.NewForConfigOrDie(config)
 
 	certManager, err := certificates.NewCertManager("abcd", certClient)
 	if err != nil {

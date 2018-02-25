@@ -2,20 +2,20 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CertificateResourcePlural is the ressource name used to get a list of cetts.
 const CertificateResourcePlural = "certificates"
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // Certificate is the specification for the Certificate object on the Kubernetes API
 type Certificate struct {
-	metav1.TypeMeta `json:",inline"`
-	// +optional
+	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              CertificateSpec `json:"spec"`
-	// +optional
-	Status CertificateStatus `json:"status,omitempty"`
+	Spec              CertificateSpec   `json:"spec"`
+	Status            CertificateStatus `json:"status,omitempty"`
 }
 
 // CertificateSpec is the specification for Certificates on the API
@@ -42,40 +42,12 @@ const (
 	CertificateStateProcessed CertificateState = "Processed"
 )
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // CertificateList represents a list of certificate
 type CertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ListMeta `json:"metadata"`
 	Items           []Certificate `json:"items"`
-}
-
-// DeepCopyObject returns a copy of the object
-func (c *Certificate) DeepCopyObject() runtime.Object {
-	// TODO: Correct DeepCopy
-	return &Certificate{}
-}
-
-// DeepCopyObject returns a copy of the object
-func (c *CertificateList) DeepCopyObject() runtime.Object {
-	// TODO: Correct DeepCopy
-	return &CertificateList{}
-}
-
-// DeepCopyObject returns a copy of the object
-func (c *CertificateStatus) DeepCopyObject() *CertificateStatus {
-	// TODO: Correct DeepCopy
-	return &CertificateStatus{}
-}
-
-// DeepCopyObject returns a copy of the object
-func (c CertificateState) DeepCopyObject() CertificateState {
-	// TODO: Correct DeepCopy
-	return c
-}
-
-// DeepCopyObject returns a copy of the object
-func (c *CertificateSpec) DeepCopyObject() *CertificateSpec {
-	// TODO: Correct DeepCopy
-	return &CertificateSpec{}
 }
