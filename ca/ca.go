@@ -37,7 +37,7 @@ func LoadCertificateAuthorityFromFiles(certPath, keyPath, pass string) (*Certifi
 		Cert: cert,
 		Pass: pass,
 	}
-	err = ca.validate()
+	err = ca.Validate()
 	if err != nil {
 		return nil, err
 	}
@@ -68,14 +68,15 @@ func NewCertificateAuthority() (*CertificateAuthority, error) {
 		Cert: certPem.Bytes,
 		Pass: password,
 	}
-	err = ca.validate()
+	err = ca.Validate()
 	if err != nil {
 		return nil, err
 	}
 	return ca, nil
 }
 
-func (ca *CertificateAuthority) validate() error {
+// Validate the CA. Will return nil if validation passes, or the error if it fails.
+func (ca *CertificateAuthority) Validate() error {
 	_, _, err := tglib.ReadCertificate(ca.Cert, ca.Key, ca.Pass)
 	return err
 }
