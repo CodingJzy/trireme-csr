@@ -33,36 +33,22 @@ func initApp() *app {
 	// initialize viper first
 	// 1. initialize our default values
 	viper.SetDefault("log_level", "info")
-	viper.SetDefault("log_format", "json")
+	viper.SetDefault("log_format", "simple")
 	viper.SetDefault("kube_config_path", os.Getenv("HOME")+DefaultKubeConfigLocation)
-	viper.SetDefault("persistor", &PersistorConfig{
-		Type: KuberetesSecretsPersistorType,
-		KubernetesSecrets: &KubernetesSecretsConfig{
-			Name:      kubepersistor.DefaultCertificateAuthorityName,
-			Namespace: kubepersistor.DefaultCertificateAuthorityNamespace,
-		},
-	})
-	viper.SetDefault("commands", &CommandsConfig{
-		Show: &ShowCmdConfig{
-			Cert:        true,
-			Key:         true,
-			KeyPassword: false,
-		},
-		Generate: &GenerateCmdConfig{
-			Force: false,
-		},
-		Import: &ImportCmdConfig{
-			Key:      "",
-			Cert:     "",
-			Password: "",
-		},
-		Export: &ExportCmdConfig{
-			Key:        "",
-			Cert:       "",
-			EncryptKey: true,
-			Password:   "",
-		},
-	})
+	viper.SetDefault("persistor.type", KubernetesSecretsPersistorType)
+	viper.SetDefault("persistor.kubernetes_secrets.name", kubepersistor.DefaultCertificateAuthorityName)
+	viper.SetDefault("persistor.kubernetes_secrets.namespace", kubepersistor.DefaultCertificateAuthorityNamespace)
+	viper.SetDefault("persistor.commands.show.cert", true)
+	viper.SetDefault("persistor.commands.show.key", true)
+	viper.SetDefault("persistor.commands.show.key_password", false)
+	viper.SetDefault("persistor.commands.generate.force", false)
+	viper.SetDefault("persistor.commands.import.key", "")
+	viper.SetDefault("persistor.commands.import.cert", "")
+	viper.SetDefault("persistor.commands.import.password", "")
+	viper.SetDefault("persistor.commands.export.key", "")
+	viper.SetDefault("persistor.commands.export.cert", "")
+	viper.SetDefault("persistor.commands.export.encrypt_key", true)
+	viper.SetDefault("persistor.commands.export.password", "")
 
 	// 2. read config file: first one will be taken into account
 	viper.SetConfigName("ca-manager")
@@ -92,7 +78,7 @@ func initApp() *app {
 	cmdShow.Flags().BoolP("key-password", "p", false, "Prints the password for the CA key")
 	viper.BindPFlag("commands.show.cert", cmdShow.Flags().Lookup("cert"))
 	viper.BindPFlag("commands.show.key", cmdShow.Flags().Lookup("key"))
-	viper.BindPFlag("commands.show.key_password", cmdShow.Flags().Lookup("key_password"))
+	viper.BindPFlag("commands.show.key_password", cmdShow.Flags().Lookup("key-password"))
 
 	// generate - generates a new CA and stores it
 	cmdGenerate := &cobra.Command{
@@ -106,7 +92,7 @@ func initApp() *app {
 		},
 	}
 	cmdGenerate.Flags().BoolP("force", "f", false, "Overwrites an already existing CA")
-	viper.BindPFlag("commands.generate.force", cmdGenerate.Flags().Lookup("force"))
+	viper.BindPFlag("Commands.Generate.Force", cmdGenerate.Flags().Lookup("force"))
 
 	// import - imports an existing CA and stores it
 	cmdImport := &cobra.Command{
@@ -168,10 +154,12 @@ func initApp() *app {
 				return fmt.Errorf("error setting up logs: %s", err)
 			}
 
+			zap.L().Debug("Loaded configuration", zap.Any("config", config))
+
 			// initialize the persistor
 			var persistor persistor.Interface
 			switch app.config.Persistor.Type {
-			case KuberetesSecretsPersistorType:
+			case KubernetesSecretsPersistorType:
 				// the Kubernetes Secrets persistor needs a kubeclient
 				kubeclient, err := newKubeClient()
 				if err != nil {
@@ -202,7 +190,7 @@ func initApp() *app {
 	rootCmd.PersistentFlags().String("log-level", "info", "Log Level")
 	rootCmd.PersistentFlags().String("log-format", "simple", "Log Format")
 	rootCmd.PersistentFlags().String("kube-config-path", os.Getenv("HOME")+DefaultKubeConfigLocation, "Path to KubeConfig. If not found or the file does not exist, in-cluster configuration is assumed.")
-	rootCmd.PersistentFlags().String("persistor-type", string(KuberetesSecretsPersistorType), "Set the persistor type. Currently only 'kubernetes-secrets' is supported.")
+	rootCmd.PersistentFlags().String("persistor-type", string(KubernetesSecretsPersistorType), "Set the persistor type. Currently only 'kubernetes-secrets' is supported.")
 	rootCmd.PersistentFlags().String("persistor-kubernetes-secrets-name", kubepersistor.DefaultCertificateAuthorityName, "Sets the Kubernetes Secret name where the CA is going to be persisted to.")
 	rootCmd.PersistentFlags().String("persistor-kubernetes-secrets-namespace", kubepersistor.DefaultCertificateAuthorityNamespace, "Sets the namespace where the Kubernetes Secret will be stored under.")
 	viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log-level"))

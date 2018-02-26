@@ -12,8 +12,8 @@ const (
 type PersistorType string
 
 const (
-	// KuberetesSecretsPersistorType definition
-	KuberetesSecretsPersistorType PersistorType = "kubernetes-secrets"
+	// KubernetesSecretsPersistorType definition
+	KubernetesSecretsPersistorType PersistorType = "kubernetes-secrets"
 )
 
 // Configuration is getting filled from viper with all the options
