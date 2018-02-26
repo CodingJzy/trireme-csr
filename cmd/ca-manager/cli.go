@@ -2,89 +2,39 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
+	camgr "github.com/aporeto-inc/trireme-csr/ca/mgr"
+	"github.com/aporeto-inc/trireme-csr/ca/persistor"
 	kubepersistor "github.com/aporeto-inc/trireme-csr/ca/persistor/kubernetes"
 )
 
-const (
-	// CAManagerEnvPrefix is the environment variable prefix
-	CAManagerEnvPrefix = "CAMGR"
-)
-
-// PersistorType type
-type PersistorType string
-
-const (
-	// KuberetesSecretsPersistorType definition
-	KuberetesSecretsPersistorType PersistorType = "kubernetes-secrets"
-)
-
-// Configuration is getting filled from viper with all the options
-type Configuration struct {
-	LogFormat string           `mapstructure:"log_format"`
-	LogLevel  string           `mapstructure:"log_level"`
-	Persistor *PersistorConfig `mapstructure:"persistor"`
-	Commands  *CommandsConfig  `mapstructure:"commands"`
+// app holds state for all the sub-commands of the application
+type app struct {
+	cmd    *cobra.Command
+	config *Configuration
+	mgr    *camgr.Manager
 }
 
-// PersistorConfig struct
-type PersistorConfig struct {
-	Type              PersistorType            `mapstructure:"type"`
-	KubernetesSecrets *KubernetesSecretsConfig `mapstructure:"kubernetes_secrets"`
+// Execute calls the underlying cobra execute command
+func (a *app) Execute() error {
+	return a.cmd.Execute()
 }
 
-// KubernetesSecretsConfig struct
-type KubernetesSecretsConfig struct {
-	Name      string `mapstructure:"name"`
-	Namespace string `mapstructure:"namespace"`
-}
-
-// CommandsConfig struct
-type CommandsConfig struct {
-	Show     *ShowCmdConfig     `mapstructure:"show"`
-	Generate *GenerateCmdConfig `mapstructure:"generate"`
-	Import   *ImportCmdConfig   `mapstructure:"import"`
-	Export   *ExportCmdConfig   `mapstructure:"export"`
-}
-
-// ShowCmdConfig struct
-type ShowCmdConfig struct {
-	Cert        bool `mapstructure:"cert"`
-	Key         bool `mapstructure:"key"`
-	KeyPassword bool `mapstructure:"key_password"`
-}
-
-// GenerateCmdConfig struct
-type GenerateCmdConfig struct {
-	Force bool `mapstructure:"force"`
-}
-
-// ImportCmdConfig struct
-type ImportCmdConfig struct {
-	Key      string `mapstructure:"key"`
-	Cert     string `mapstructure:"cert"`
-	Password string `mapstructure:"password"`
-}
-
-// ExportCmdConfig struct
-type ExportCmdConfig struct {
-	Key        string `mapstructure:"key"`
-	Cert       string `mapstructure:"cert"`
-	EncryptKey bool   `mapstructure:"encrypt_key"`
-	Password   string `mapstructure:"password"`
-}
-
-// initCLI initializes the cobra CLI and returns the root command
-func initCLI(showFunc, generateFunc, importFunc, exportFunc func(*Configuration) error, setLogs func(logFormat, logLevel string) error) *cobra.Command {
+// initApp initializes the app and returns a reference to it
+func initApp() *app {
+	var app app
 	var config Configuration
 	// initialize viper first
 	// 1. initialize our default values
 	viper.SetDefault("log_level", "info")
 	viper.SetDefault("log_format", "json")
+	viper.SetDefault("kube_config_path", os.Getenv("HOME")+DefaultKubeConfigLocation)
 	viper.SetDefault("persistor", &PersistorConfig{
 		Type: KuberetesSecretsPersistorType,
 		KubernetesSecrets: &KubernetesSecretsConfig{
@@ -134,7 +84,7 @@ func initCLI(showFunc, generateFunc, importFunc, exportFunc func(*Configuration)
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// execute the actual command
-			return showFunc(&config)
+			return app.Show()
 		},
 	}
 	cmdShow.Flags().BoolP("cert", "c", true, "Prints the CA certificate")
@@ -152,7 +102,7 @@ func initCLI(showFunc, generateFunc, importFunc, exportFunc func(*Configuration)
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// execute the actual command
-			return generateFunc(&config)
+			return app.Generate()
 		},
 	}
 	cmdGenerate.Flags().BoolP("force", "f", false, "Overwrites an already existing CA")
@@ -166,7 +116,7 @@ func initCLI(showFunc, generateFunc, importFunc, exportFunc func(*Configuration)
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// execute the actual command
-			return importFunc(&config)
+			return app.Import()
 		},
 	}
 	cmdImport.Flags().StringP("key", "k", "", "Path to the key file of the CA.")
@@ -184,7 +134,7 @@ func initCLI(showFunc, generateFunc, importFunc, exportFunc func(*Configuration)
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// execute the actual command
-			return exportFunc(&config)
+			return app.Export()
 		},
 	}
 	cmdExport.Flags().StringP("key", "k", "", "Path to the key file - where to write the key of the CA")
@@ -198,9 +148,10 @@ func initCLI(showFunc, generateFunc, importFunc, exportFunc func(*Configuration)
 
 	// last but not least: the root command
 	rootCmd := &cobra.Command{
-		Use:  "",
-		Long: "Command for launching programs with Trireme policy.",
-		Args: cobra.NoArgs,
+		Use:   os.Args[0],
+		Short: "CA Manager",
+		Long:  "Command for managing the Trireme-CSR CA",
+		Args:  cobra.NoArgs,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// for all commands we want to apply our viper configuration first
 			err := viper.Unmarshal(&config)
@@ -208,25 +159,61 @@ func initCLI(showFunc, generateFunc, importFunc, exportFunc func(*Configuration)
 				return fmt.Errorf("failed to initialize config: %s", err.Error())
 			}
 
+			// set the config in our app
+			app.config = &config
+
 			// setup logs
 			err = setLogs(config.LogFormat, config.LogLevel)
 			if err != nil {
 				return fmt.Errorf("error setting up logs: %s", err)
 			}
+
+			// initialize the persistor
+			var persistor persistor.Interface
+			switch app.config.Persistor.Type {
+			case KuberetesSecretsPersistorType:
+				// the Kubernetes Secrets persistor needs a kubeclient
+				kubeclient, err := newKubeClient()
+				if err != nil {
+					zap.L().Fatal("failed to create kubernetes client", zap.Error(err))
+				}
+
+				// now initialize the kubernetes Secrets persistor
+				persistor = kubepersistor.NewSecretsPersistor(
+					kubeclient,
+					config.Persistor.KubernetesSecrets.Name,
+					config.Persistor.KubernetesSecrets.Namespace,
+				)
+
+			default:
+				return fmt.Errorf("unsupported persistor type: '%s'", app.config.Persistor.Type)
+			}
+
+			// initialize the CA manager now with the configured persistor
+			app.mgr, err = camgr.NewManager(persistor)
+			if err != nil {
+				return fmt.Errorf("failed to initialize CA Manager: %s", err.Error())
+			}
+
 			return nil
 		},
 	}
 	rootCmd.AddCommand(cmdShow, cmdGenerate, cmdImport, cmdExport)
-	rootCmd.PersistentFlags().String("log-level", "info", "Log level")
-	rootCmd.PersistentFlags().String("log-format", "", "Log Format")
+	rootCmd.PersistentFlags().String("log-level", "info", "Log Level")
+	rootCmd.PersistentFlags().String("log-format", "simple", "Log Format")
+	rootCmd.PersistentFlags().String("kube-config-path", os.Getenv("HOME")+DefaultKubeConfigLocation, "Path to KubeConfig. If not found or the file does not exist, in-cluster configuration is assumed.")
 	rootCmd.PersistentFlags().String("persistor-type", string(KuberetesSecretsPersistorType), "Set the persistor type. Currently only 'kubernetes-secrets' is supported.")
 	rootCmd.PersistentFlags().String("persistor-kubernetes-secrets-name", kubepersistor.DefaultCertificateAuthorityName, "Sets the Kubernetes Secret name where the CA is going to be persisted to.")
 	rootCmd.PersistentFlags().String("persistor-kubernetes-secrets-namespace", kubepersistor.DefaultCertificateAuthorityNamespace, "Sets the namespace where the Kubernetes Secret will be stored under.")
 	viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log-level"))
 	viper.BindPFlag("log_format", rootCmd.PersistentFlags().Lookup("log-format"))
+	viper.BindPFlag("kube_config_path", rootCmd.PersistentFlags().Lookup("kube-config-path"))
 	viper.BindPFlag("persistor.type", rootCmd.PersistentFlags().Lookup("persistor-type"))
 	viper.BindPFlag("persistor.kubernetes_secrets.name", rootCmd.PersistentFlags().Lookup("persistor-kubernetes-secrets-name"))
 	viper.BindPFlag("persistor.kubernetes_secrets.namespace", rootCmd.PersistentFlags().Lookup("persistor-kubernetes-secrets-namespace"))
 
-	return rootCmd
+	// last but not least, set the root command in the app
+	app.cmd = rootCmd
+
+	return &app
 }
