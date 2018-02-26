@@ -56,3 +56,12 @@ func (p *SecretsPersistor) Exists() bool {
 	_, err := p.client.CoreV1().Secrets(p.namespace).Get(p.name, metav1.GetOptions{})
 	return err == nil
 }
+
+// Load the stored CA
+func (p *SecretsPersistor) Load() (*ca.CertificateAuthority, error) {
+	obj, err := p.client.CoreV1().Secrets(p.namespace).Get(p.name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secretToCA(obj)
+}
