@@ -90,6 +90,25 @@ func (m *Manager) ValidateCA() error {
 	return m.ca.Validate()
 }
 
+// GetCA returns a deep copy of the loaded CA. Will return an error if no CA is loaded.
+func (m *Manager) GetCA() (*ca.CertificateAuthority, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	if !m.isCALoaded() {
+		return nil, fmt.Errorf("no CA loaded")
+	}
+
+	newKey := make([]byte, len(m.ca.Key))
+	copy(newKey, m.ca.Key)
+	newCert := make([]byte, len(m.ca.Cert))
+	copy(newCert, m.ca.Cert)
+	return &ca.CertificateAuthority{
+		Key:  newKey,
+		Cert: newCert,
+		Pass: m.ca.Pass,
+	}, nil
+}
+
 // GenerateCA tries to generate a CA. It returns an error if this operation fails
 // or a CA is already loaded. *NOTE:* This will **not** persist the CA, but only
 // make it available to the manager!
