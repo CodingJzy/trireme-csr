@@ -1,3 +1,6 @@
+// Package manager implements a CA manager. It is able to load and hold a CA in memory,
+// it can generate one a new CA from scratch, and it can also load/store a CA to a persistence layer
+// which is making use of the `persistor.Interface` from the `persistor` package.
 package manager
 
 import (
@@ -8,14 +11,15 @@ import (
 	"github.com/aporeto-inc/trireme-csr/ca/persistor"
 )
 
-// Manager struct
+// Manager struct holds a reference internally to the CA, as well as ther persistor
 type Manager struct {
 	lock      sync.Mutex
 	ca        *ca.CertificateAuthority
 	persistor persistor.Interface
 }
 
-// NewManager creates a new CA Manager
+// NewManager creates a new CA Manager. You have to pass a valid persistor to successfully
+// create the manager, or otherwise an error will be thrown.
 func NewManager(persistor persistor.Interface) (*Manager, error) {
 	if persistor == nil {
 		return nil, fmt.Errorf("must be initialized with CA persistor")
@@ -33,7 +37,7 @@ func (m *Manager) IsCALoaded() bool {
 	return m.isCALoaded()
 }
 
-// UnloadCA unloads a loaded CA
+// UnloadCA unloads a loaded CA from the manager
 func (m *Manager) UnloadCA() {
 	m.lock.Lock()
 	defer m.lock.Unlock()

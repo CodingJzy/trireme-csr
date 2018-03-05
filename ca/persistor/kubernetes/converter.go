@@ -10,11 +10,17 @@ import (
 )
 
 const (
+	// secretCertEntry is the field name of the CA certificate inside of a Kubernetes Secret
 	secretCertEntry = "ca-cert.pem"
-	secretKeyEntry  = "ca-key.pem"
-	secretPwEntry   = "ca-pass"
+
+	// secretKeyEntry is the field name of the CA Key inside of a Kubernetes Secret
+	secretKeyEntry = "ca-key.pem"
+
+	// secretPwEntry is the field name of the CA Key Password of a Kubernetes Secret
+	secretPwEntry = "ca-pass"
 )
 
+// caToSecret converts a `CertificateAuthority` struct to a Kubernetes Secret struct
 func caToSecret(ca ca.CertificateAuthority, name, namespace string) corev1.Secret {
 	return corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -30,6 +36,7 @@ func caToSecret(ca ca.CertificateAuthority, name, namespace string) corev1.Secre
 	}
 }
 
+// secretToCA converts a Kubernetes Secret struct to a `CertificateAuthority` struct
 func secretToCA(secret *corev1.Secret) (*ca.CertificateAuthority, error) {
 	key, ok := secret.Data[secretKeyEntry]
 	if !ok {

@@ -1,3 +1,8 @@
+// Package ca holds everything that is related to the CA for Trireme-CSR. In the ca package itself
+// is just one high-level struct called `CertificateAuthority` - it holds a CA in memory. This struct is
+// heavily used inside of the CA Manager (in the `mgr` sub-package) which offers functionality around
+// managing a CA. The `persistor` sub-package defines a high-level layer on how to store/load a CA to a
+// storage of some kind.
 package ca
 
 import (
@@ -10,10 +15,12 @@ import (
 )
 
 const (
+	// passwordLength is the length of a password when it is auto-generated for a CA
 	passwordLength = 32
 )
 
-// CertificateAuthority holds a CA
+// CertificateAuthority holds a CA. This is still in its infancies, however, it works very well
+// like this together with tglib.
 type CertificateAuthority struct {
 	Key  []byte
 	Pass string
@@ -81,6 +88,7 @@ func (ca *CertificateAuthority) Validate() error {
 	return err
 }
 
+// randomPassword provides a random password for the `NewCertificateAuthority` function
 func randomPassword() string {
 	// tribute goes to https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
 	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_,.<>/?:;{}[]+"
