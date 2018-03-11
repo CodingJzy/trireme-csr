@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 
 	"github.com/aporeto-inc/tg/tglib"
+	"go.uber.org/zap"
 )
 
 // Export the installed CA
@@ -37,6 +38,7 @@ func (a *app) Export() error {
 
 	// now write the cert to disk
 	if len(a.config.Commands.Export.Cert) > 0 {
+		zap.L().Debug("Writing certificate now to disk...", zap.String("path", a.config.Commands.Export.Cert))
 		err = ioutil.WriteFile(a.config.Commands.Export.Cert, ca.Cert, 0644)
 		if err != nil {
 			return fmt.Errorf("failed to write certificate to file: %s", err.Error())
@@ -47,6 +49,7 @@ func (a *app) Export() error {
 	keyBytes := ca.Key
 	passwordStr := ca.Pass
 	if !a.config.Commands.Export.EncryptKey {
+		zap.L().Debug("Decrypting Key now as requested...")
 		// we don't need to write the password at all if we decrypt the key
 		passwordStr = ""
 
@@ -56,11 +59,11 @@ func (a *app) Export() error {
 		}
 
 		keyBytes = pem.EncodeToMemory(decryptedKeyPem)
-		return nil
 	}
 
 	// now write the key to disk
 	if len(a.config.Commands.Export.Key) > 0 {
+		zap.L().Debug("Writing Key now to disk...", zap.String("path", a.config.Commands.Export.Key))
 		err = ioutil.WriteFile(a.config.Commands.Export.Key, keyBytes, 0400)
 		if err != nil {
 			return fmt.Errorf("failed to write private key to file: %s", err.Error())
@@ -69,6 +72,7 @@ func (a *app) Export() error {
 
 	// and last but not least write the password for the key to disk
 	if len(a.config.Commands.Export.Key) > 0 && len(passwordStr) > 0 {
+		zap.L().Debug("Writing the Key password to disk...", zap.String("path", a.config.Commands.Export.Key))
 		err = ioutil.WriteFile(a.config.Commands.Export.Password, []byte(passwordStr), 0400)
 		if err != nil {
 			return fmt.Errorf("failed to write password for key to file: %s", err.Error())
