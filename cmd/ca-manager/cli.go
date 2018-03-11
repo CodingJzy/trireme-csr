@@ -132,6 +132,19 @@ func initApp() *app {
 	viper.BindPFlag("commands.export.cert", cmdExport.Flags().Lookup("cert"))
 	viper.BindPFlag("commands.export.password", cmdExport.Flags().Lookup("password"))
 
+	cmdDelete := &cobra.Command{
+		Use:   "delete",
+		Short: "Deletes the existing CA",
+		Long:  "This will delete an existing CA from the peristor.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// execute the actual command
+			return app.Delete()
+		},
+	}
+	cmdDelete.Flags().BoolP("force", "f", false, "Forces the deletion without confirmation")
+	viper.BindPFlag("commands.delete.force", cmdDelete.Flags().Lookup("force"))
+
 	// last but not least: the root command
 	rootCmd := &cobra.Command{
 		Use:   os.Args[0],
@@ -186,7 +199,7 @@ func initApp() *app {
 			return nil
 		},
 	}
-	rootCmd.AddCommand(cmdShow, cmdGenerate, cmdImport, cmdExport)
+	rootCmd.AddCommand(cmdShow, cmdGenerate, cmdImport, cmdExport, cmdDelete)
 	rootCmd.PersistentFlags().String("log-level", "info", "Log Level")
 	rootCmd.PersistentFlags().String("log-format", "simple", "Log Format")
 	rootCmd.PersistentFlags().String("kube-config-path", os.Getenv("HOME")+DefaultKubeConfigLocation, "Path to KubeConfig. If not found or the file does not exist, in-cluster configuration is assumed.")

@@ -43,6 +43,7 @@ type CommandsConfig struct {
 	Generate *GenerateCmdConfig `mapstructure:"generate"`
 	Import   *ImportCmdConfig   `mapstructure:"import"`
 	Export   *ExportCmdConfig   `mapstructure:"export"`
+	Delete   *DeleteCmdConfig   `mapstructure:"delete"`
 }
 
 // ShowCmdConfig struct
@@ -70,4 +71,9 @@ type ExportCmdConfig struct {
 	Cert       string `mapstructure:"cert"`
 	EncryptKey bool   `mapstructure:"encrypt_key"`
 	Password   string `mapstructure:"password"`
+}
+
+// DeleteCmdConfig struct
+type DeleteCmdConfig struct {
+	Force bool `mapstructure:"force"`
 }
