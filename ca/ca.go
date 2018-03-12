@@ -7,6 +7,8 @@ package ca
 
 import (
 	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"time"
@@ -64,20 +66,20 @@ func NewCertificateAuthority() (*CertificateAuthority, error) {
 		x509.ECDSAWithSHA384, x509.ECDSA, true, nil,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tglib.IssueCertificate: %s", err.Error())
 	}
 	keyPemEncrypted, err := tglib.EncryptPrivateKey(keyPem, password)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tglib.EncryptPrivateKey: %s", err.Error())
 	}
 	ca := &CertificateAuthority{
-		Key:  keyPemEncrypted.Bytes,
-		Cert: certPem.Bytes,
+		Key:  pem.EncodeToMemory(keyPemEncrypted),
+		Cert: pem.EncodeToMemory(certPem),
 		Pass: password,
 	}
 	err = ca.Validate()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ca.Validate: %s", err.Error())
 	}
 	return ca, nil
 }
