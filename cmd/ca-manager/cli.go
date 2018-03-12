@@ -45,10 +45,12 @@ func initApp() *app {
 	viper.SetDefault("persistor.commands.import.key", "")
 	viper.SetDefault("persistor.commands.import.cert", "")
 	viper.SetDefault("persistor.commands.import.password", "")
+	viper.SetDefault("persistor.commands.import.force", false)
 	viper.SetDefault("persistor.commands.export.key", "")
 	viper.SetDefault("persistor.commands.export.cert", "")
 	viper.SetDefault("persistor.commands.export.encrypt_key", true)
 	viper.SetDefault("persistor.commands.export.password", "")
+	viper.SetDefault("persistor.commands.delete.force", false)
 
 	// 2. read config file: first one will be taken into account
 	viper.SetConfigName("ca-manager")
@@ -108,9 +110,11 @@ func initApp() *app {
 	cmdImport.Flags().StringP("key", "k", "", "Path to the key file of the CA.")
 	cmdImport.Flags().StringP("cert", "c", "", "Path to the certificate file of the CA.")
 	cmdImport.Flags().StringP("password", "p", "", "Password to decrypt the key file of the CA.")
+	cmdImport.Flags().BoolP("force", "f", false, "Forces the import and will overwrite an existing CA.")
 	viper.BindPFlag("commands.import.key", cmdImport.Flags().Lookup("key"))
 	viper.BindPFlag("commands.import.cert", cmdImport.Flags().Lookup("cert"))
 	viper.BindPFlag("commands.import.password", cmdImport.Flags().Lookup("password"))
+	viper.BindPFlag("commands.import.force", cmdImport.Flags().Lookup("force"))
 
 	// export - exports an existing CA to files if it exists
 	cmdExport := &cobra.Command{

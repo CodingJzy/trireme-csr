@@ -63,6 +63,7 @@ type ImportCmdConfig struct {
 	Key      string `mapstructure:"key"`
 	Cert     string `mapstructure:"cert"`
 	Password string `mapstructure:"password"`
+	Force    bool   `mapstructure:"force"`
 }
 
 // ExportCmdConfig struct
