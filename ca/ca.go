@@ -37,7 +37,7 @@ func LoadCertificateAuthorityFromFiles(certPath, keyPath, pass string) (*Certifi
 	if err != nil {
 		return nil, err
 	}
-	key, err = ioutil.ReadFile(certPath)
+	key, err = ioutil.ReadFile(keyPath)
 	if err != nil {
 		return nil, err
 	}
