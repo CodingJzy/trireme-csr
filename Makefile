@@ -17,14 +17,14 @@ codegen:
 	echo 'const REVISION = "$(REVISION)"' >> $(VERSION_FILE)
 
 build: codegen
-	CGO_ENABLED=1 go build -a -installsuffix cgo
+	CGO_ENABLED=1 go build -a -v -installsuffix cgo
 
 build_ca-manager: codegen
-	cd cmd/ca-manager && CGO_ENABLED=1 go build -a -installsuffix cgo
+	cd cmd/ca-manager && CGO_ENABLED=1 go build -a -v -installsuffix cgo
 
 package: build build_ca-manager
 	mv trireme-csr docker/trireme-csr
-	mv ca-manager docker/ca-manager
+	mv cmd/ca-manager/ca-manager docker/ca-manager
 
 docker_build: package
 	docker \
