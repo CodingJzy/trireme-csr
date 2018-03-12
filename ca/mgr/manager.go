@@ -47,6 +47,10 @@ func (m *Manager) UnloadCA() {
 
 // LoadCAFromFiles tries to load a CA from the given certPath, keyPath and key password.
 // It returns with an error if this operation fails or a CA is already loaded.
+// The provided password is assumed to be able to decrypt an encrypted key at `keyPath`.
+// However, if the key is unencrypted and no password was provided, the key gets loaded,
+// a new password will be generated, and the key will exist encrypted in the CA manager
+// with the new generated password.
 // *NOTE:* This will **not** persist the CA, but only make it available to the manager!
 func (m *Manager) LoadCAFromFiles(certPath, keyPath, password string) error {
 	m.lock.Lock()

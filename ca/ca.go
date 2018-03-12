@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/aporeto-inc/tg/tglib"
@@ -29,22 +30,64 @@ type CertificateAuthority struct {
 	Cert []byte
 }
 
-// LoadCertificateAuthorityFromFiles loads an existing CA from files
+// LoadCertificateAuthorityFromFiles loads an existing CA from files.
+// The provided password is assumed to be able to decrypt an encrypted key at `keyPath`.
+// However, if the key is unencrypted and no password was provided, the key gets loaded,
+// a new password will be generated, and the key will exist encrypted in the CA
+// with the newly generated password.
 func LoadCertificateAuthorityFromFiles(certPath, keyPath, pass string) (*CertificateAuthority, error) {
 	var err error
-	var cert, key []byte
+	var password string
+	var cert, key, keyBytes []byte
 	cert, err = ioutil.ReadFile(certPath)
 	if err != nil {
 		return nil, err
 	}
-	key, err = ioutil.ReadFile(keyPath)
+	keyBytes, err = ioutil.ReadFile(keyPath)
 	if err != nil {
 		return nil, err
 	}
+	// by default we just pass them
+	// however, if they need to get encrypted
+	// they get overwritten
+	key = keyBytes
+	password = pass
+
+	// check if the key is encrypted
+	// if not, we will add encryption
+	var ok bool
+	var procType string
+	var keyPem *pem.Block
+	keyPem, _ = pem.Decode(keyBytes)
+	procType, ok = keyPem.Headers["Proc-Type"]
+	if ok {
+		if strings.HasSuffix(procType, "ENCRYPTED") && len(pass) == 0 {
+			return nil, fmt.Errorf("key is encrypted, but no password provided")
+		}
+	} else {
+		// no headers set, so also not encrypted
+		// encrypting key
+
+		// if there is a password, then this is an error
+		if len(pass) != 0 {
+			return nil, fmt.Errorf("key is not encrypted, but password provided")
+		}
+
+		// generate a random password now
+		password = randomPassword()
+		keyPem, err = tglib.EncryptPrivateKeyPEM(keyBytes, password)
+		if err != nil {
+			return nil, err
+		}
+
+		// and encode it back to bytes
+		key = pem.EncodeToMemory(keyPem)
+	}
+
 	ca := &CertificateAuthority{
 		Key:  key,
 		Cert: cert,
-		Pass: pass,
+		Pass: password,
 	}
 	err = ca.Validate()
 	if err != nil {
