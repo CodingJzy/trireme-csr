@@ -2,6 +2,8 @@
 cmd/ClientEmulator/ClientEmulator
 vendor/
 trireme-csr
+/ca-manager
+/docker/ca-manager
 Gopkg.lock
 run.sh
 ca-cert.pem
