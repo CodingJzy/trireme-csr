@@ -3,7 +3,7 @@
 ##
 [[constraint]]
   name = "github.com/aporeto-inc/trireme-lib"
-  version = "^8.0.0"
+  branch  = "kubernetes_monitor"
 
 [[override]]
   name = "github.com/aporeto-inc/netlink-go"
@@ -79,11 +79,11 @@
     unused-packages = false
     # this is the default anyway
     #non-go = false
-  
+
   [[prune.project]]
     name = "k8s.io/gengo"
     unused-packages = false
-  
+
   [[prune.project]]
     name = "k8s.io/kube-openapi"
     unused-packages = false
