@@ -3,7 +3,7 @@
 ##
 [[constraint]]
   name = "github.com/aporeto-inc/trireme-lib"
-  version = "^8.0.0"
+  branch = "remote-bin"
 
 [[override]]
   name = "github.com/aporeto-inc/netlink-go"
