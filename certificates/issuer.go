@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/aporeto-inc/tg/tglib"
-	"github.com/aporeto-inc/trireme-lib/controller/pkg/pkiverifier"
+	"go.aporeto.io/trireme-lib/controller/pkg/pkiverifier"
 )
 
 // Issuer is able to validate and sign certificates based on a CSR.
