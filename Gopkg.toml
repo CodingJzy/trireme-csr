@@ -13,7 +13,7 @@
 # go to master right now
 [[override]]
   name = "github.com/bvandewalle/go-ipset"
-  branch = "master"
+  revision = "b38e5838b7b2f2ad48e06ec4b500011976080621"
 
 [[constraint]]
   name = "github.com/aporeto-inc/tg"
