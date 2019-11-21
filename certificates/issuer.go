@@ -137,7 +137,7 @@ func (i *TriremeIssuer) Sign(csr *x509.CertificateRequest) ([]byte, error) {
 
 // IssueToken generates a valid token for the cert given as parameter
 func (i *TriremeIssuer) IssueToken(cert *x509.Certificate) ([]byte, error) {
-	return i.tokenIssuer.CreateTokenFromCertificate(cert)
+	return i.tokenIssuer.CreateTokenFromCertificate(cert, []string)
 }
 
 // GetCACert returns the CA Certificate that is used for this issuer.
