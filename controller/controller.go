@@ -283,7 +283,7 @@ func (c *CertificateController) process(certRequest *certificatev1alpha2.Certifi
 	zap.L().Info("Cert successfully generated", zap.String("name", certRequest.Name), zap.String("resource_version", certRequest.ResourceVersion))
 
 	// Load the certificate as x509.Certificate as well, so that we can issue the token
-	x509Cert, err := tglib.ReadCertificatePEMFromData(cert)
+	x509Cert, err := tglib.ParseCertificate(cert)
 	if err != nil {
 		zap.L().Error("Error loading x509 Cert", zap.Error(err), zap.String("name", certRequest.Name), zap.String("resource_version", certRequest.ResourceVersion))
 		c.updateCertRejected(

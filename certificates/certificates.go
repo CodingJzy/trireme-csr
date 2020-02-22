@@ -195,13 +195,13 @@ func (m *CertManager) SendAndWaitforCert(timeout time.Duration) error {
 				if cert.Status.Certificate != nil {
 					fmt.Printf("Cert is available: %+v", cert.Status.Certificate)
 					m.certPEM = cert.Status.Certificate
-					m.cert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
+					m.cert, err = tglib.ParseCertificate(cert.Status.Certificate)
 					if err != nil {
 						return fmt.Errorf("couldn't parse certificate: %s", err.Error())
 					}
 
 					m.caCertPEM = cert.Status.Ca
-					m.caCert, err = tglib.ReadCertificatePEMFromData(cert.Status.Certificate)
+					m.caCert, err = tglib.ParseCertificate(cert.Status.Certificate)
 					if err != nil {
 						return fmt.Errorf("couldn't parse CA certificate: %s", err.Error())
 					}
