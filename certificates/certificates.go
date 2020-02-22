@@ -13,8 +13,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
-	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
+	certificatev1alpha2 "github.com/CodingJzy/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
+	certificateclient "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned"
 )
 
 // CertManager manages the client side for the client.

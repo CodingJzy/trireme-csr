@@ -11,10 +11,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/aporeto-inc/trireme-csr/certificates"
+	"github.com/CodingJzy/trireme-csr/certificates"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
+	certificateclient "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned"
 )
 
 // KubeconfigPath is the static path to my KubeConfig

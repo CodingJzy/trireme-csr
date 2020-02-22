@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	certmanagerk8sio "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io"
+	certmanagerk8sio "github.com/CodingJzy/trireme-csr/pkg/apis/certmanager.k8s.io"
 )
 
 // SchemeGroupVersion is the group version used to register these objects.

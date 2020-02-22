@@ -1,17 +1,16 @@
 package main
 
 import (
+	"github.com/CodingJzy/trireme-csr/certificates"
+	"github.com/CodingJzy/trireme-csr/config"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/aporeto-inc/trireme-csr/certificates"
-	"github.com/aporeto-inc/trireme-csr/config"
-
-	certificatecontroller "github.com/aporeto-inc/trireme-csr/controller"
-	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
-	certificateinformers "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions"
+	certificatecontroller "github.com/CodingJzy/trireme-csr/controller"
+	certificateclient "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned"
+	certificateinformers "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

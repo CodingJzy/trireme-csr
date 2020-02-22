@@ -23,9 +23,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
-	certmanager_k8s_io "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io"
-	internalinterfaces "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/internalinterfaces"
+	versioned "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned"
+	certmanager_k8s_io "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io"
+	internalinterfaces "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

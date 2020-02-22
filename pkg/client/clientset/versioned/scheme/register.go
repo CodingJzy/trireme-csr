@@ -16,8 +16,8 @@
 package scheme
 
 import (
-	certmanagerv1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha1"
-	certmanagerv1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
+	certmanagerv1alpha1 "github.com/CodingJzy/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha1"
+	certmanagerv1alpha2 "github.com/CodingJzy/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

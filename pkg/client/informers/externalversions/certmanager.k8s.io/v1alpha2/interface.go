@@ -19,7 +19,7 @@
 package v1alpha2
 
 import (
-	internalinterfaces "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.
