@@ -29,7 +29,11 @@ func (c *CertificateStatus) GetCertificate() (*x509.Certificate, error) {
 	if c.Certificate == nil {
 		return nil, fmt.Errorf("no certificate has been issued yet")
 	}
-	return tglib.ReadCertificatePEMFromData(c.Certificate)
+	x509certs, err := tglib.ParseCertificate(c.Ca)
+	if err != nil {
+		return nil, err
+	}
+	return x509certs, nil
 }
 
 // GetCACertificate returns a `*x509.Certificate` object from the status holding the issuing CA
@@ -38,7 +42,8 @@ func (c *CertificateStatus) GetCACertificate() (*x509.Certificate, error) {
 	if c.Ca == nil {
 		return nil, fmt.Errorf("no CA certificate found")
 	}
-	return tglib.ReadCertificatePEMFromData(c.Ca)
+
+	return tglib.ParseCertificate(c.Ca)
 }
 
 // GetCertificateRequest returns a `*x509.CertificateRequest` object from the spec, or
