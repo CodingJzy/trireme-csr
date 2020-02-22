@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/aporeto-inc/tg/tglib"
+	"go.aporeto.io/tg/tglib"
 	"go.aporeto.io/trireme-lib/controller/pkg/pkiverifier"
 )
 

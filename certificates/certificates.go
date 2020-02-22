@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/aporeto-inc/tg/tglib"
+	"go.aporeto.io/tg/tglib"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

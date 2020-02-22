@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/aporeto-inc/tg/tglib"
+	"go.aporeto.io/tg/tglib"
 	"github.com/aporeto-inc/trireme-csr/certificates"
 
 	"k8s.io/client-go/tools/cache"

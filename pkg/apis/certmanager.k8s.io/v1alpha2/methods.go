@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	"github.com/aporeto-inc/tg/tglib"
+	"go.aporeto.io/tg/tglib"
 )
 
 // GetCertificateRequest returns a `*x509.CertificateRequest` object from the spec, or
