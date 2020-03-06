@@ -10,8 +10,8 @@ import (
 	"io/ioutil"
 	"time"
 
+	"git.cloud.top/DSec/trireme-lib/controller/pkg/pkiverifier"
 	"go.aporeto.io/tg/tglib"
-	"go.aporeto.io/trireme-lib/controller/pkg/pkiverifier"
 )
 
 // Issuer is able to validate and sign certificates based on a CSR.
