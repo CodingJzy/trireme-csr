@@ -19,9 +19,9 @@
 package certmanager
 
 import (
-	v1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io/v1alpha1"
-	v1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io/v1alpha2"
-	internalinterfaces "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io/v1alpha1"
+	v1alpha2 "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io/v1alpha2"
+	internalinterfaces "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

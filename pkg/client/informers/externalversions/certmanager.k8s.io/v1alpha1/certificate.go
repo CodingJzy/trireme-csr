@@ -21,10 +21,10 @@ package v1alpha1
 import (
 	time "time"
 
-	certmanager_k8s_io_v1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha1"
-	versioned "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/client/listers/certmanager.k8s.io/v1alpha1"
+	certmanager_k8s_io_v1alpha1 "github.com/CodingJzy/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha1"
+	versioned "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/CodingJzy/trireme-csr/pkg/client/listers/certmanager.k8s.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

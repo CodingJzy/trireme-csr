@@ -16,8 +16,8 @@
 package versioned
 
 import (
-	certmanagerv1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha1"
-	certmanagerv1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha2"
+	certmanagerv1alpha1 "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha1"
+	certmanagerv1alpha2 "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha2"
 	glog "github.com/golang/glog"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"

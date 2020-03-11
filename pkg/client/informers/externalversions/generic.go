@@ -21,8 +21,8 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha1"
-	v1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
+	v1alpha1 "github.com/CodingJzy/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha1"
+	v1alpha2 "github.com/CodingJzy/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )

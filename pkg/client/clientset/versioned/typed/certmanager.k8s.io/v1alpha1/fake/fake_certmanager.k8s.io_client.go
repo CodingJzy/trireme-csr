@@ -16,7 +16,7 @@
 package fake
 
 import (
-	v1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha1"
+	v1alpha1 "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

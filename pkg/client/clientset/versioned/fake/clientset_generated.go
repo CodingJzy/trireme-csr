@@ -16,11 +16,11 @@
 package fake
 
 import (
-	clientset "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
-	certmanagerv1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha1"
-	fakecertmanagerv1alpha1 "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha1/fake"
-	certmanagerv1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha2"
-	fakecertmanagerv1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha2/fake"
+	clientset "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned"
+	certmanagerv1alpha1 "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha1"
+	fakecertmanagerv1alpha1 "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha1/fake"
+	certmanagerv1alpha2 "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha2"
+	fakecertmanagerv1alpha2 "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned/typed/certmanager.k8s.io/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
