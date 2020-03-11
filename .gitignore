@@ -8,3 +8,4 @@ ca-cert.pem
 ca-key.pem
 k8s/ecdsa.csr.pem
 k8s/ecdsa.key.pem
+.idea

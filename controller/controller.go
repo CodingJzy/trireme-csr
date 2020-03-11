@@ -7,15 +7,15 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/CodingJzy/trireme-csr/certificates"
 	"go.aporeto.io/tg/tglib"
-	"github.com/aporeto-inc/trireme-csr/certificates"
 
 	"k8s.io/client-go/tools/cache"
 
-	certificatev1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
-	certificateclient "github.com/aporeto-inc/trireme-csr/pkg/client/clientset/versioned"
-	certificateinformers "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions"
-	certificateinformerv1alpha2 "github.com/aporeto-inc/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io/v1alpha2"
+	certificatev1alpha2 "github.com/CodingJzy/trireme-csr/pkg/apis/certmanager.k8s.io/v1alpha2"
+	certificateclient "github.com/CodingJzy/trireme-csr/pkg/client/clientset/versioned"
+	certificateinformers "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions"
+	certificateinformerv1alpha2 "github.com/CodingJzy/trireme-csr/pkg/client/informers/externalversions/certmanager.k8s.io/v1alpha2"
 )
 
 // CertificateController contains all the logic to implement the issuance of certificates.
